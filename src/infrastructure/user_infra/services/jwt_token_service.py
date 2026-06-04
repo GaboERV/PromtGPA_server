@@ -6,7 +6,7 @@ from ....domain.user_context import TokenService, Usuario
 class JwtTokenService(TokenService):
     def __init__(self):
         # Configuraciones leídas de variables de entorno con fallbacks seguros para desarrollo
-        self.secret_key = os.getenv("JWT_SECRET_KEY", "super-secret-key-change-me-in-production")
+        self.secret_key = os.getenv("JWT_SECRET_KEY", "prod-security-fallback-must-be-replaced-via-env")
         self.algorithm = os.getenv("JWT_ALGORITHM", "HS256")
         self.access_token_expire_minutes = int(os.getenv("JWT_ACCESS_TOKEN_EXPIRE_MINUTES", "60"))
 
