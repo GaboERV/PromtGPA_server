@@ -483,21 +483,95 @@ Valida 61 endpoints secuencialmente con `TestClient` (sin servidor real). Al ini
 
 ---
 
-## Estrategia de Branching (Git Flow)
+## 📋 Documentación de Endpoints de la API (60 Funcionales)
 
-| Rama | Propósito |
-|---|---|
-| `main` | Producción estable. Tags `v0.x.x` |
-| `develop` | Integración activa |
-| `feature/*` | Una por feature, desde `develop`, merge `--no-ff` |
-| `release/*` | Preparación versión, merge en `main` + backmerge `develop` |
-| `hotfix/*` | Parche urgente desde `main` |
+A continuación se detallan las 60 rutas funcionales agrupadas por módulo:
 
-```bash
-git checkout develop
-git checkout -b feature/mi-feature
-# ... desarrollar ...
-git checkout develop
-git merge --no-ff feature/mi-feature
-git push origin develop
-```
+### 🔑 1. Usuarios (`/users`)
+* `POST   /users/register` — Registro de cuentas de usuario.
+* `POST   /users/login` — Autenticación de usuarios (Retorna un JWT Bearer Token).
+* `GET    /users/me` — Consultar información de perfil del usuario autenticado (Protegido).
+* `DELETE /users/me` — Eliminar cuenta de usuario (Protegido por contraseña).
+
+### 📖 2. Cuadernos (`/notebooks`)
+* `POST   /notebooks` — Crear cuaderno (Requiere doble autenticación: Bearer Token + `X-API-Key` de un solo uso para evitar inyección masiva).
+* `GET    /notebooks` — Listar cuadernos del usuario.
+* `GET    /notebooks/{notebook_id}` — Obtener detalle de un cuaderno.
+* `PUT    /notebooks/{notebook_id}` — Actualizar título/descripción de un cuaderno.
+* `DELETE /notebooks/{notebook_id}` — Eliminar cuaderno y todos sus recursos.
+* `POST   /notebooks/{notebook_id}/files` — Cargar archivos (PDF, TXT, etc.) al cuaderno.
+* `GET    /notebooks/{notebook_id}/files` — Listar archivos de un cuaderno.
+* `DELETE /notebooks/files/{archivo_id}` — Eliminar archivo específico de la base de datos.
+* `POST   /notebooks/{notebook_id}/chats` — Crear un hilo de conversación de chat con IA.
+* `GET    /notebooks/{notebook_id}/chats` — Listar los chats abiertos en el cuaderno.
+* `DELETE /notebooks/chats/{chat_id}` — Eliminar un hilo de chat.
+* `GET    /notebooks/chats/{chat_id}/messages` — Obtener mensajes de chat paginados.
+* `POST   /notebooks/chats/{chat_id}/messages` — Enviar mensaje del usuario al chat.
+
+### 👥 3. Salas de Estudio (`/study-rooms`)
+* `POST   /study-rooms` — Crear una sala colaborativa asociada a un cuaderno.
+* `POST   /study-rooms/join` — Unirse a una sala de estudio utilizando un código de acceso alfanumérico.
+* `GET    /study-rooms/creadas` — Listar las salas colaborativas creadas por el usuario.
+* `GET    /study-rooms/participa` — Listar las salas en las que participa el usuario.
+* `GET    /study-rooms/{sala_id}` — Obtener información detallada de la sala.
+* `GET    /study-rooms/{sala_id}/acceso` — Verificar rol del usuario en la sala (`creador` o `invitado`).
+* `POST   /study-rooms/{sala_id}/files` — Subir archivo colaborativo (Bloqueado por Proxy para `invitado`).
+* `GET    /study-rooms/{sala_id}/files` — Listar archivos subidos en la sala.
+* `DELETE /study-rooms/{sala_id}/files/{archivo_id}` — Eliminar un archivo (Bloqueado por Proxy para `invitado`).
+* `GET    /study-rooms/{sala_id}/chats` — Listar chats colaborativos de la sala.
+* `GET    /study-rooms/{sala_id}/chats/{chat_id}/messages` — Listar mensajes del chat colaborativo.
+* `POST   /study-rooms/{sala_id}/chats/{chat_id}/messages` — Enviar un mensaje al chat colaborativo.
+* `POST   /study-rooms/{sala_id}/flashcards` — Crear una flashcard colaborativa en la sala.
+* `GET    /study-rooms/{sala_id}/flashcards` — Listar flashcards de la sala.
+* `POST   /study-rooms/{sala_id}/exam` — Generar examen colaborativo (Bloqueado por Proxy para `invitado`).
+* `GET    /study-rooms/{sala_id}/exams` — Listar exámenes generados en la sala de estudio.
+
+### 🧠 4. Evaluaciones IA y RAG (`/assessments`)
+* `POST   /assessments/flashcards` — Generar flashcards automáticamente con IA a partir de texto o archivo.
+* `GET    /assessments/flashcards/{notebook_id}` — Consultar flashcards guardadas de un cuaderno.
+* `POST   /assessments/exam` — Generar examen de opción múltiple con IA a partir del contexto del cuaderno.
+* `GET    /assessments/exam/{examen_id}` — Estructura de preguntas y opciones del examen generado.
+* `GET    /assessments/exam/notebook/{notebook_id}` — Obtener todos los exámenes asociados a un cuaderno.
+* `GET    /assessments/exam/sala/{sala_id}` — Obtener exámenes de una sala colaborativa.
+* `POST   /assessments/exam/{examen_id}/submit` — Enviar respuestas del examen para calificar y persistir el intento.
+* `GET    /assessments/attempts` — Historial de intentos de exámenes resueltos por el usuario.
+* `GET    /assessments/attempts/{intento_id}` — Detalle, calificación y respuestas completas de un intento.
+* `GET    /assessments/attempts/exam/{examen_id}` — Intentos de examen resueltos para una plantilla de examen.
+
+### 📈 5. Progreso e Historial (`/progress`)
+* `GET    /progress/metrics` — Promedio acumulado y total de exámenes resueltos por el usuario.
+* `GET    /progress/pending-cards` — Listar tarjetas de estudio (flashcards) pendientes.
+* `GET    /progress/daily-activity` — Consolidado de actividad diaria basado en fecha de subida de archivos, exámenes completados y mensajes enviados.
+
+### 🛡️ 6. API Keys de Un Solo Uso (`/api-keys`)
+* `POST   /api-keys` — Generar una API Key firmada JWT con JTI único (Requiere Bearer de sesión. Límite de cooldown activo para mitigar inyecciones).
+* `GET    /api-keys` — Listar historial de claves emitidas (Requiere Bearer).
+* `DELETE /api-keys/{key_id}` — Invalidar/Revocar una clave antes de ser consumida (Requiere Bearer).
+
+### 🪝 7. Webhooks (`/webhooks`)
+* `POST   /webhooks/subscriptions` — Registrar una URL para recibir notificaciones HTTP POST del evento `exam.completed`.
+* `GET    /webhooks/subscriptions/org/{org_id}` — Listar webhooks activos de una sala de estudio.
+* `GET    /internal/webhooks/attempts` — Consultar log de intentos de entrega asíncronos en segundo plano.
+* `POST   /internal/webhooks/attempts/{attempt_id}/retry` — Re-encolar un webhook de forma asíncrona tras un fallo de conexión.
+
+### 📊 8. Administración y Telemetría (`/admin`)
+* `GET    /admin/classes/{sala_id}/stats` — Notas promedio acumuladas de los alumnos en exámenes de una sala.
+* `GET    /admin/users/{user_id}/audit-logs` — Obtener trazas de auditoría de seguridad del usuario (Detección de conductas sospechosas).
+* `GET    /admin/users/{user_id}/storage` — Calcular dinámicamente el almacenamiento en MB que ocupan los archivos cargados por el inquilino.
+
+### 🔍 9. Diagnósticos e Internos
+* `GET    /` — Estado de salud online básico.
+* `GET    /health/v1` — Detalle de salud detallado del servidor.
+* `GET    /health/processes` — Monitoreo de hilos activos en segundo plano.
+* `GET    /health/metadata` — Versión y metadatos del software.
+
+---
+
+## 🔀 Estrategia de Branching (Git Flow)
+
+El proyecto utiliza la metodología **Git Flow** para regular los flujos de integración y despliegue continuo de forma segura:
+* **`main`**: Código de producción estable. Marcas con Tag de versiones oficiales (ej. `v0.2.0`).
+* **`develop`**: Rama principal de desarrollo donde se integran las nuevas funcionalidades terminadas.
+* **`feature/*`**: Ramas de desarrollo de características individuales creadas desde `develop`.
+* **`release/*`**: Ramas de preparación de versión creadas desde `develop` para fusionarse en `main` y sincronizarse con `develop`.
+* **`hotfix/*`**: Ramas de emergencia creadas desde `main` para parches críticos de producción.
