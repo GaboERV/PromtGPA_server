@@ -1,15 +1,13 @@
-version: '3.8'
-
 services:
   db:
     image: postgres:15-alpine
     container_name: promptgpt-db
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: promptgpt
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-promptgpt}
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     restart: always
@@ -18,7 +16,7 @@ services:
     image: redis:7-alpine
     container_name: promptgpt-redis
     ports:
-      - "6379:6379"
+      - "${REDIS_PORT:-6379}:6379"
     volumes:
       - redis_data:/data
     restart: always
@@ -29,12 +27,14 @@ services:
       dockerfile: docker/Dockerfile
     container_name: promptgpt-web
     ports:
-      - "8000:8000"
+      - "${APP_PORT:-8000}:8000"
     environment:
-      DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/promptgpt
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-promptgpt}
       REDIS_URL: redis://redis:6379/0
-      JWT_SECRET_KEY: prod-security-fallback-must-be-replaced-via-env
-      API_KEY_COOLDOWN_SECONDS: 60
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-prod-security-fallback-must-be-replaced-via-env}
+      JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
+      API_KEY_COOLDOWN_SECONDS: ${API_KEY_COOLDOWN_SECONDS:-60}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
     depends_on:
       - db
       - redis
