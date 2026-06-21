@@ -182,5 +182,3 @@ El proyecto utiliza la metodología **Git Flow** para regular los flujos de inte
 * **`feature/*`**: Ramas de desarrollo de características individuales creadas desde `develop`.
 * **`release/*`**: Ramas de preparación de versión creadas desde `develop` para fusionarse en `main` y sincronizarse con `develop`.
 * **`hotfix/*`**: Ramas de emergencia creadas desde `main` para parches críticos de producción.
-
-Para un desglose completo de los comandos y flujos, consulta el archivo [Estrategia_Branching.md](file:///C:/Users/gabri/.gemini/antigravity/brain/ba3c4a21-5dd7-49d9-957a-4b045f99bea2/Estrategia_Branching.md).
