@@ -2,6 +2,7 @@ import os
 from datetime import datetime, timedelta, timezone
 import jwt
 from ....domain.user_context import TokenService, Usuario
+from ....domain.exceptions import TokenInvalidoError
 
 class JwtTokenService(TokenService):
     def __init__(self):
@@ -36,3 +37,17 @@ class JwtTokenService(TokenService):
             return True
         except jwt.PyJWTError:
             return False
+
+    async def get_user_id_from_token(self, token: str) -> int:
+        """
+        Decodifica el token y extrae el ID de usuario ('sub') mapeado como entero.
+        Lanza TokenInvalidoError si el token o el ID son inválidos.
+        """
+        try:
+            payload = jwt.decode(token, self.secret_key, algorithms=[self.algorithm])
+            user_id = payload.get("sub")
+            if user_id is None:
+                raise TokenInvalidoError()
+            return int(user_id)
+        except (jwt.PyJWTError, ValueError, TypeError) as e:
+            raise TokenInvalidoError() from e

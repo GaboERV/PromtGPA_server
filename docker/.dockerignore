@@ -1,0 +1,12 @@
+venv/
+.git/
+.gitignore
+prompt_gpt.db
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.agents/
+.vscode/
+Dockerfile
+docker-compose.yml
