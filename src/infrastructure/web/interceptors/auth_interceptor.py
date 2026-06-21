@@ -1,5 +1,5 @@
 from typing import Optional
-from fastapi import Depends, HTTPException, status, Header
+from fastapi import Cookie, Depends, HTTPException, status, Header
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import jwt
 import os
@@ -13,20 +13,29 @@ security_bearer = HTTPBearer(auto_error=False)
 
 async def get_current_user_id(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(security_bearer),
+    access_token: Optional[str] = Cookie(None),
     x_api_key: Optional[str] = Header(None, alias="X-API-Key"),
     user_service: UserService = Depends(get_user_service)
 ) -> int:
     """
-    Interceptor de autenticación. Admite tanto un Bearer token estándar
-    como una cabecera 'X-API-Key' de un solo uso.
+    Interceptor de autenticación. Admite:
+      1. Bearer token en el header `Authorization` (Swagger / clientes nativos).
+      2. Cookie HttpOnly `access_token` (frontend cross-origin).
+      3. Cabecera `X-API-Key` de un solo uso.
     
     Lanza una excepción HTTP 401 si las credenciales son inválidas, han expirado
     o si la API Key de un solo uso ya fue consumida.
     """
-    if credentials:
-        token = credentials.credentials
+    # Prioridad 1: Bearer token en el header Authorization
+    raw_token: Optional[str] = credentials.credentials if credentials else None
+
+    # Prioridad 2: Cookie HttpOnly como fallback cross-origin
+    if not raw_token and access_token:
+        raw_token = access_token
+
+    if raw_token:
         try:
-            user_id = await user_service.validate_and_get_user_id(token)
+            user_id = await user_service.validate_and_get_user_id(raw_token)
             return user_id
         except TokenInvalidoError as e:
             raise HTTPException(
@@ -72,27 +81,32 @@ async def get_current_user_id(
     else:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Credenciales de acceso requeridas (Bearer token o X-API-Key).",
+            detail="Credenciales de acceso requeridas (Bearer token, cookie o X-API-Key).",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
 
 async def get_current_user_id_bearer_only(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(security_bearer),
+    access_token: Optional[str] = Cookie(None),
     user_service: UserService = Depends(get_user_service)
 ) -> int:
     """
-    Exige estrictamente un token Bearer de sesión. No admite X-API-Key.
+    Exige estrictamente un token Bearer de sesión o la cookie `access_token`.
+    No admite X-API-Key.
     """
-    if not credentials:
+    raw_token: Optional[str] = credentials.credentials if credentials else None
+    if not raw_token and access_token:
+        raw_token = access_token
+
+    if not raw_token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Credencial Bearer token requerida.",
+            detail="Credencial Bearer token o cookie requerida.",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    token = credentials.credentials
     try:
-        user_id = await user_service.validate_and_get_user_id(token)
+        user_id = await user_service.validate_and_get_user_id(raw_token)
         return user_id
     except TokenInvalidoError as e:
         raise HTTPException(
@@ -104,17 +118,22 @@ async def get_current_user_id_bearer_only(
 
 async def get_current_user_id_with_api_key(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(security_bearer),
+    access_token: Optional[str] = Cookie(None),
     x_api_key: Optional[str] = Header(None, alias="X-API-Key"),
     user_service: UserService = Depends(get_user_service)
 ) -> int:
     """
-    Exige tanto el Bearer token (predeterminado) como la cabecera 'X-API-Key'
+    Exige tanto el Bearer token/cookie (predeterminado) como la cabecera 'X-API-Key'
     (de un solo uso) para acceder a un recurso sensible y evitar inyección masiva.
     """
-    if not credentials:
+    raw_token: Optional[str] = credentials.credentials if credentials else None
+    if not raw_token and access_token:
+        raw_token = access_token
+
+    if not raw_token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Se requiere el token Bearer predeterminado.",
+            detail="Se requiere el token Bearer o cookie predeterminado.",
             headers={"WWW-Authenticate": "Bearer"},
         )
     if not x_api_key:
@@ -123,10 +142,9 @@ async def get_current_user_id_with_api_key(
             detail="Se requiere la cabecera 'X-API-Key' de un solo uso para acceder a este recurso.",
         )
 
-    # 1. Validar Bearer token
-    token = credentials.credentials
+    # 1. Validar Bearer token / cookie
     try:
-        user_id_bearer = await user_service.validate_and_get_user_id(token)
+        user_id_bearer = await user_service.validate_and_get_user_id(raw_token)
     except TokenInvalidoError as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

@@ -1,4 +1,7 @@
+import os
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from src.infrastructure.web.routers.user_router import router as user_router
 from src.infrastructure.web.routers.notebook_router import router as notebook_router
 from src.infrastructure.web.routers.study_room_router import router as study_room_router
@@ -12,17 +15,45 @@ from src.infrastructure.web.routers.health_router import router as health_router
 from src.infrastructure.web.errors.error_handlers import register_error_handlers
 from src.infrastructure.core.database import engine, Base
 
+
+
 # Import all ORM models to ensure they are registered in SQLAlchemy metadata before create_all
 from src.infrastructure.user_infra.models.user_orm import UserORM
 from src.infrastructure.notebook_infra.models.notebook_orm import NotebookORM, FileORM, ChatORM, MessageORM, FlashcardORM
 from src.infrastructure.study_room_infra.models.study_room_orm import SalaEstudioORM, ParticipanteSalaORM
 from src.infrastructure.assessment_infra.models.assessment_orm import ExamenORM, PreguntaExamenORM, IntentoExamenORM, RespuestaUsuarioORM
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Crea automáticamente la base de datos al iniciar la aplicación."""
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    yield
+
 app = FastAPI(
     title="PromptGPT API",
     description="Backend en FastAPI con Arquitectura Hexagonal limpia",
-    version="0.2.0"
+    version="0.2.0",
+    lifespan=lifespan,
 )
+
+# ─── CORS ────────────────────────────────────────────────────────────────────
+# Lee los orígenes permitidos desde la variable de entorno ALLOWED_ORIGINS
+# (valores separados por coma). Por defecto apunta a localhost para desarrollo.
+_raw_origins = os.getenv(
+    "ALLOWED_ORIGINS",
+    "http://localhost:3000,http://127.0.0.1:3000"
+)
+ALLOWED_ORIGINS: list[str] = [o.strip() for o in _raw_origins.split(",") if o.strip()]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=ALLOWED_ORIGINS,
+    allow_credentials=True,       # Permite cookies cross-origin
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+# ─────────────────────────────────────────────────────────────────────────────
 
 # Registrar manejadores de excepciones globales del dominio
 register_error_handlers(app)
