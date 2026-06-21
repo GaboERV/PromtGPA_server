@@ -1,4 +1,4 @@
-from .cuaderno_resumen import CuadernoResumen
+from .repositories.cuaderno_resumen import CuadernoResumen
 from typing import List
 
 class Usuario:

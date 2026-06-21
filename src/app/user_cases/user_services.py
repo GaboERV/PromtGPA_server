@@ -1,5 +1,5 @@
 from ...domain.user_context import Usuario, UsuarioRepository, EncryptService, TokenService
-from ...domain.exceptions import UsuarioNoEncontradoError, CredencialesInvalidasError
+from ...domain.exceptions import UsuarioNoEncontradoError, CredencialesInvalidasError, TokenInvalidoError
 from .dto import CreateUsuarioDTO, LoginDTO, InfoUsuarioDTO
 
 class UserService:
@@ -53,7 +53,7 @@ class UserService:
             id=usuario.id,
             nombre=usuario.nombre,
             email=usuario.email,
-            activo=usuario.is_active
+            is_active=usuario.is_active
         )
 
     async def delete_usuario(self, email: str, contrasenia: str) -> None:
@@ -73,3 +73,16 @@ class UserService:
         # 3. Eliminar por ID
         await self.usuario_repository.delete_usuario(usuario.id)
         return None
+
+    async def validate_and_get_user_id(self, token: str) -> int:
+        """
+        Valida el token de seguridad de forma abstracta a través de los puertos del dominio.
+        Lanza TokenInvalidoError si el token no es válido o está expirado.
+        Retorna el identificador del usuario (user_id).
+        """
+        es_valido = await self.token_service.validate_token(token)
+        if not es_valido:
+            raise TokenInvalidoError()
+        
+        user_id = await self.token_service.get_user_id_from_token(token)
+        return user_id

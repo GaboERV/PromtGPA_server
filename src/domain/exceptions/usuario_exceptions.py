@@ -9,3 +9,8 @@ class CredencialesInvalidasError(BaseError):
     def __init__(self):
         self.mensaje = "Credenciales inválidas"
         super().__init__(self.mensaje)
+
+class TokenInvalidoError(BaseError):
+    def __init__(self):
+        self.mensaje = "Token inválido o expirado"
+        super().__init__(self.mensaje)

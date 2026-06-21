@@ -1,7 +1,19 @@
-from .usuario_exceptions import UsuarioNoEncontradoError
-from .usuario_exceptions import CredencialesInvalidasError
+from .usuario_exceptions import UsuarioNoEncontradoError, CredencialesInvalidasError, TokenInvalidoError
+from .notebook_exceptions import (
+    CuadernoNoEncontradoError,
+    SalaNoEncontradaError,
+    PermisoDenegadoError,
+    ExamenNoEncontradoError,
+    IntentoNoEncontradoError
+)
 
-__all__ =[
+__all__ = [
     "UsuarioNoEncontradoError",
-    "CredencialesInvalidasError"
+    "CredencialesInvalidasError",
+    "TokenInvalidoError",
+    "CuadernoNoEncontradoError",
+    "SalaNoEncontradaError",
+    "PermisoDenegadoError",
+    "ExamenNoEncontradoError",
+    "IntentoNoEncontradoError"
 ]
