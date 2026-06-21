@@ -1,4 +1,6 @@
+import os
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from src.infrastructure.web.routers.user_router import router as user_router
 from src.infrastructure.web.routers.notebook_router import router as notebook_router
 from src.infrastructure.web.routers.study_room_router import router as study_room_router
@@ -23,6 +25,24 @@ app = FastAPI(
     description="Backend en FastAPI con Arquitectura Hexagonal limpia",
     version="0.2.0"
 )
+
+# ─── CORS ────────────────────────────────────────────────────────────────────
+# Lee los orígenes permitidos desde la variable de entorno ALLOWED_ORIGINS
+# (valores separados por coma). Por defecto apunta a localhost para desarrollo.
+_raw_origins = os.getenv(
+    "ALLOWED_ORIGINS",
+    "http://localhost:3000,http://127.0.0.1:3000"
+)
+ALLOWED_ORIGINS: list[str] = [o.strip() for o in _raw_origins.split(",") if o.strip()]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=ALLOWED_ORIGINS,
+    allow_credentials=True,       # Permite cookies cross-origin
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+# ─────────────────────────────────────────────────────────────────────────────
 
 # Registrar manejadores de excepciones globales del dominio
 register_error_handlers(app)

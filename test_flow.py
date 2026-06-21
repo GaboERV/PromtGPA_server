@@ -63,6 +63,21 @@ token_creator = resp.json()["access_token"]
 headers_creator = {"Authorization": f"Bearer {token_creator}"}
 print("[+] Creator logged in and received token")
 
+# ── Test: autenticación por cookie cross-origin ──────────────────────────────
+# 1. Verificar que el login inyecta la cookie Set-Cookie en la respuesta
+assert "set-cookie" in resp.headers, "FAIL: Login no devolvió Set-Cookie header"
+set_cookie_value = resp.headers["set-cookie"]
+assert "access_token=" in set_cookie_value, "FAIL: Cookie no contiene access_token"
+assert "HttpOnly" in set_cookie_value, "FAIL: Cookie no tiene flag HttpOnly"
+print("[+] Login inyecta cookie HttpOnly 'access_token' correctamente")
+
+# 2. Verificar que la cookie autentica en /users/me sin header Authorization
+resp_cookie = client.get("/users/me", cookies={"access_token": token_creator})
+assert resp_cookie.status_code == 200, f"FAIL: Cookie auth falló en /users/me: {resp_cookie.text}"
+assert resp_cookie.json()["email"] == "creator@test.com", "FAIL: Email incorrecto en respuesta cookie"
+print("[+] Cookie 'access_token' autentica correctamente en /users/me (sin Bearer header)")
+# ─────────────────────────────────────────────────────────────────────────────
+
 # Register Guest
 resp = client.post("/users/register", json={
     "email": "guest@test.com",
