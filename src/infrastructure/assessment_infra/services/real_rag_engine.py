@@ -9,7 +9,6 @@ from ....domain.assessment_context.entities.examen import Examen, PreguntaExamen
 from ....domain.notebook_context.entities.flashcard import Flashcard
 from ....utils.RAG.embeddings import embedding_service
 from ....utils.RAG.llm import LLMClientFactory
-
 MAX_CONTEXT_CHUNK_SIZE = 1200
 MAX_CONTEXT_CHUNKS = 5
 

@@ -17,7 +17,7 @@ from ...app.study_room_cases.study_room_services import StudyRoomService
 
 # Assessment domain/infra
 from ..assessment_infra.repositories import SqlAlchemyExamenRepository
-from ..assessment_infra.services import RealRAGEngineService, SimulatedRAGEngineService
+from ..assessment_infra.services import RealRAGEngineService
 from ...app.assessment_cases.assessment_services import AssessmentService
 
 

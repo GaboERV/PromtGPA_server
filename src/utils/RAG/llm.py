@@ -6,7 +6,9 @@ DEMO: las implementaciones tienen un modo "mock" cuando no hay API key,
 para que el proyecto sea ejecutable sin credenciales.
 """
 from abc import ABC, abstractmethod
+import json
 import os
+import re
 from typing import AsyncGenerator, Literal, Optional
 
 
@@ -27,6 +29,43 @@ class MockLLMClient(ILLMClient):
     """Cliente de prueba. Devuelve respuestas fijas. Útil para tests y demo sin créditos."""
 
     async def complete(self, system: str, user: str, max_tokens: int = 1024) -> tuple[str, int]:
+        prompt = user.lower()
+        if "tarjetas de estudio" in prompt or "tarjetas" in prompt or "flashcards" in prompt or "cards" in prompt:
+            count = 3
+            match = re.search(r"genera\s+(\d+)\s+(tarjetas|flashcards|cards)", prompt)
+            if match:
+                count = int(match.group(1))
+            prompt_text = prompt.split('prompt:')[-1].strip() if 'prompt:' in prompt else prompt.strip()
+            prompt_text = prompt_text.replace('\n', ' ').strip()
+            flashcards = [
+                {
+                    "question": f"¿Qué aspecto importante debes recordar de '{prompt_text[:50]}'?",
+                    "answer": f"Una idea clave relacionada con el contexto y el prompt: {prompt_text[:80]}."
+                }
+                for i in range(1, count + 1)
+            ]
+            text = json.dumps(flashcards, ensure_ascii=False)
+            return text, len(text.split())
+
+        if "examen de práctica" in prompt or "opción múltiple" in prompt or "exam" in prompt:
+            title = "Examen de práctica generado por el mock LLM"
+            prompt_text = prompt.split('prompt:')[-1].strip() if 'prompt:' in prompt else prompt.strip()
+            prompt_text = prompt_text.replace('\n', ' ').strip()
+            questions = []
+            for i in range(1, 4):
+                questions.append({
+                    "question_text": f"Según el prompt, ¿qué punto clave corresponde a la pregunta {i}?",
+                    "opciones": {
+                        "A": f"{prompt_text[:35]} es la respuesta más probable.",
+                        "B": "Una alternativa secundaria.",
+                        "C": "Una opción distractora.",
+                        "D": "Otra idea irrelevante."
+                    },
+                    "correct_answer": "A"
+                })
+            text = json.dumps({"title": title, "questions": questions}, ensure_ascii=False)
+            return text, len(text.split())
+
         response = (
             f"[MOCK LLM] He recibido tu pregunta: '{user[:80]}...'. "
             "Esta es una respuesta simulada. Configura una API key real para respuestas verdaderas."
