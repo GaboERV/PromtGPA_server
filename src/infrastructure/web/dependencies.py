@@ -17,7 +17,7 @@ from ...app.study_room_cases.study_room_services import StudyRoomService
 
 # Assessment domain/infra
 from ..assessment_infra.repositories import SqlAlchemyExamenRepository
-from ..assessment_infra.services import SimulatedRAGEngineService
+from ..assessment_infra.services import RealRAGEngineService
 from ...app.assessment_cases.assessment_services import AssessmentService
 
 
@@ -72,13 +72,15 @@ def get_examen_repository(session: AsyncSession = Depends(get_db_session)) -> Sq
     """Fábrica para instanciar el repositorio físico de exámenes."""
     return SqlAlchemyExamenRepository(session)
 
-def get_rag_engine_service() -> SimulatedRAGEngineService:
-    """Retorna la simulación concreta del motor RAG."""
-    return SimulatedRAGEngineService()
+def get_rag_engine_service() -> RealRAGEngineService:
+    """Retorna la implementación real del motor RAG."""
+    return RealRAGEngineService()
+
+# TODO: use SimulatedRAGEngineService for local development with a feature flag if needed.
 
 def get_assessment_service(
     examen_repository: SqlAlchemyExamenRepository = Depends(get_examen_repository),
     cuaderno_repository: SqlAlchemyCuadernoRepository = Depends(get_notebook_repository),
-    rag_engine: SimulatedRAGEngineService = Depends(get_rag_engine_service)
+    rag_engine: RealRAGEngineService = Depends(get_rag_engine_service)
 ) -> AssessmentService:
     return AssessmentService(examen_repository, cuaderno_repository, rag_engine)
