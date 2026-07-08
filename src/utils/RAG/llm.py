@@ -115,28 +115,92 @@ class ClaudeClient(ILLMClient):
 
 class OpenAIClient(ILLMClient):
     def __init__(self, api_key: str):
-        # TODO: implementar con openai library
-        self.api_key = api_key
+        try:
+            from openai import AsyncOpenAI
+            self.client = AsyncOpenAI(api_key=api_key)
+        except ImportError:
+            self.client = None
 
     async def complete(self, system: str, user: str, max_tokens: int = 1024) -> tuple[str, int]:
-        return await MockLLMClient().complete(system, user, max_tokens)
+        if not self.client:
+            return await MockLLMClient().complete(system, user, max_tokens)
+        response = await self.client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": system},
+                {"role": "user", "content": user}
+            ],
+            max_tokens=max_tokens,
+        )
+        text = response.choices[0].message.content if response.choices else ""
+        tokens = response.usage.completion_tokens if response.usage else 0
+        return text, tokens
 
     async def stream(self, system: str, user: str, max_tokens: int = 1024) -> AsyncGenerator[str, None]:
-        async for chunk in MockLLMClient().stream(system, user, max_tokens):
-            yield chunk
+        if not self.client:
+            async for chunk in MockLLMClient().stream(system, user, max_tokens):
+                yield chunk
+            return
+        stream = await self.client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": system},
+                {"role": "user", "content": user}
+            ],
+            max_tokens=max_tokens,
+            stream=True,
+        )
+        async for chunk in stream:
+            if chunk.choices and chunk.choices[0].delta.content:
+                yield chunk.choices[0].delta.content
 
 
 class GeminiClient(ILLMClient):
     def __init__(self, api_key: str):
-        # TODO: implementar con google-generativeai
-        self.api_key = api_key
+        try:
+            import google.generativeai as genai
+            genai.configure(api_key=api_key)
+            self.api_key = api_key
+            self.is_configured = True
+        except ImportError:
+            self.is_configured = False
 
     async def complete(self, system: str, user: str, max_tokens: int = 1024) -> tuple[str, int]:
-        return await MockLLMClient().complete(system, user, max_tokens)
+        if not self.is_configured:
+            return await MockLLMClient().complete(system, user, max_tokens)
+        try:
+            import google.generativeai as genai
+            model = genai.GenerativeModel('gemini-1.5-flash', system_instruction=system)
+            response = await model.generate_content_async(
+                user,
+                generation_config=genai.types.GenerationConfig(max_output_tokens=max_tokens)
+            )
+            tokens = response.usage_metadata.candidates_token_count if hasattr(response, 'usage_metadata') else len(response.text.split())
+            return response.text, tokens
+        except Exception as e:
+            print(f"[Gemini Error]: {e}")
+            return await MockLLMClient().complete(system, user, max_tokens)
 
     async def stream(self, system: str, user: str, max_tokens: int = 1024) -> AsyncGenerator[str, None]:
-        async for chunk in MockLLMClient().stream(system, user, max_tokens):
-            yield chunk
+        if not self.is_configured:
+            async for chunk in MockLLMClient().stream(system, user, max_tokens):
+                yield chunk
+            return
+        try:
+            import google.generativeai as genai
+            model = genai.GenerativeModel('gemini-1.5-flash', system_instruction=system)
+            response = await model.generate_content_async(
+                user,
+                generation_config=genai.types.GenerationConfig(max_output_tokens=max_tokens),
+                stream=True
+            )
+            async for chunk in response:
+                if chunk.text:
+                    yield chunk.text
+        except Exception as e:
+            print(f"[Gemini Stream Error]: {e}")
+            async for chunk in MockLLMClient().stream(system, user, max_tokens):
+                yield chunk
 
 
 class LLMClientFactory:
