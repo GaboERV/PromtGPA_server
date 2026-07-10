@@ -20,6 +20,7 @@ from ...domain.notebook_context.interfaces.lector_contenido import LectorConteni
 from ...domain.notebook_context.interfaces.participante_interactivo import ParticipanteInteractivo
 from ...domain.notebook_context.entities.archivo import ArchivoResumen
 from ...domain.notebook_context.entities.chat import ChatResumen, Mensaje
+from ..notebook_cases.notebook_services import NotebookService
 
 
 class RepositoryLectorContenido(LectorContenido):
@@ -49,27 +50,21 @@ class RepositoryLectorContenido(LectorContenido):
 
 class RepositoryParticipanteInteractivo(ParticipanteInteractivo):
     """
-    Adaptador concreto que implementa ParticipanteInteractivo delegando operaciones al CuadernoRepository.
+    Adaptador concreto que implementa ParticipanteInteractivo delegando operaciones al NotebookService.
     """
-    def __init__(self, repo: CuadernoRepository):
-        self.repo = repo
+    def __init__(self, notebook_service: NotebookService):
+        self.notebook_service = notebook_service
 
-    async def enviar_mensaje_chat(self, chat_id: int, role: str, content: str) -> Mensaje:
-        mensaje = Mensaje(
-            id=None,
-            chat_id=chat_id,
-            role=role,
-            content=content,
-            created_at=datetime.utcnow()
-        )
-        await self.repo.save_message(mensaje)
-        return mensaje
+    async def enviar_mensaje_chat(self, chat_id: int, role: str, content: str) -> List[Mensaje]:
+        # Ignoramos el "role" porque la IA contesta automáticamente con agregar_mensaje_usuario
+        return await self.notebook_service.agregar_mensaje_usuario(chat_id, content)
 
 
 class StudyRoomService:
-    def __init__(self, sala_repository: SalaEstudioRepository, cuaderno_repository: CuadernoRepository):
+    def __init__(self, sala_repository: SalaEstudioRepository, cuaderno_repository: CuadernoRepository, notebook_service: NotebookService = None):
         self.sala_repository = sala_repository
         self.cuaderno_repository = cuaderno_repository
+        self.notebook_service = notebook_service
 
     async def crear_sala(self, title: str, notebook_id: int, creado_por_id: int) -> int:
         # Validar que el cuaderno exista
@@ -155,7 +150,7 @@ class StudyRoomService:
 
         # Retornar el Proxy de Protección que encapsula el Cuaderno
         lector = RepositoryLectorContenido(self.cuaderno_repository, sala.notebook_id)
-        interactivo = RepositoryParticipanteInteractivo(self.cuaderno_repository)
+        interactivo = RepositoryParticipanteInteractivo(self.notebook_service)
 
         return SalaEstudioInvitado(
             sala=sala,

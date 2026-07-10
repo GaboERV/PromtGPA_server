@@ -223,7 +223,7 @@ async def listar_mensajes_paginados(
         page=page
     )
 
-@router.post("/chats/{chat_id}/messages", response_model=MessageResponseSchema, status_code=status.HTTP_201_CREATED)
+@router.post("/chats/{chat_id}/messages", response_model=List[MessageResponseSchema], status_code=status.HTTP_201_CREATED)
 async def agregar_mensaje_usuario(
     chat_id: int,
     schema: MessageCreateSchema,

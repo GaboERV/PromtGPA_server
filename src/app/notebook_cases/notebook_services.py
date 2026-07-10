@@ -4,11 +4,13 @@ from ...domain.notebook_context.entities.cuaderno import Cuaderno
 from ...domain.notebook_context.entities.archivo import Archivo
 from ...domain.notebook_context.entities.chat import Chat, Mensaje
 from ...domain.notebook_context.interfaces.cuaderno_repository import CuadernoRepository
+from ...domain.assessment_context.services.rag_engine_service import RAGEngineService
 from ...domain.exceptions import CuadernoNoEncontradoError
 
 class NotebookService:
-    def __init__(self, repository: CuadernoRepository):
+    def __init__(self, repository: CuadernoRepository, rag_engine: Optional[RAGEngineService] = None):
         self.repository = repository
+        self.rag_engine = rag_engine
 
     async def crear_cuaderno(self, title: str, description: str, usuario_id: int) -> int:
         cuaderno = Cuaderno(
@@ -101,7 +103,8 @@ class NotebookService:
         offset = (page - 1) * limit
         return await self.repository.get_messages_paginated(chat_id, limit, offset)
 
-    async def agregar_mensaje_usuario(self, chat_id: int, content: str) -> Mensaje:
+    async def agregar_mensaje_usuario(self, chat_id: int, content: str) -> List[Mensaje]:
+        # Guardar mensaje de usuario
         mensaje = Mensaje(
             id=None,
             chat_id=chat_id,
@@ -110,4 +113,32 @@ class NotebookService:
             created_at=datetime.utcnow()
         )
         await self.repository.save_message(mensaje)
-        return mensaje
+
+        mensajes_resultado = [mensaje]
+
+        # Generar respuesta de IA si el motor está disponible
+        if self.rag_engine:
+            chat = await self.repository.get_chat_by_id(chat_id)
+            if chat:
+                archivos = await self.repository.list_archivos_by_notebook_id(chat.notebook_id)
+                texto_crudo = "\n\n".join([a.content for a in archivos if a.content])
+                
+                # Obtener historial reciente para el contexto del bot (últimos 10 mensajes)
+                historial_db = await self.repository.get_messages_paginated(chat_id, limit=10, offset=0)
+                # Invertir para orden cronológico
+                historial_db.reverse()
+                historial = [{"role": m.role, "content": m.content} for m in historial_db if m.id != mensaje.id]
+
+                respuesta_ai_texto = await self.rag_engine.generar_respuesta_chat(content, historial, texto_crudo)
+                
+                mensaje_ai = Mensaje(
+                    id=None,
+                    chat_id=chat_id,
+                    role="assistant",
+                    content=respuesta_ai_texto,
+                    created_at=datetime.utcnow()
+                )
+                await self.repository.save_message(mensaje_ai)
+                mensajes_resultado.append(mensaje_ai)
+
+        return mensajes_resultado

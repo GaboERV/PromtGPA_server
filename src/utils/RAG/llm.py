@@ -52,23 +52,28 @@ class MockLLMClient(ILLMClient):
             prompt_text = prompt.split('prompt:')[-1].strip() if 'prompt:' in prompt else prompt.strip()
             prompt_text = prompt_text.replace('\n', ' ').strip()
             questions = []
+            respuestas = ["B", "C", "B"]
             for i in range(1, 4):
                 questions.append({
                     "question_text": f"Según el prompt, ¿qué punto clave corresponde a la pregunta {i}?",
                     "opciones": {
-                        "A": f"{prompt_text[:35]} es la respuesta más probable.",
-                        "B": "Una alternativa secundaria.",
-                        "C": "Una opción distractora.",
+                        "A": "Una opción distractora.",
+                        "B": f"{prompt_text[:35]} es la respuesta más probable." if respuestas[i-1] == "B" else "Una alternativa secundaria.",
+                        "C": f"{prompt_text[:35]} es la respuesta más probable." if respuestas[i-1] == "C" else "Una opción distractora.",
                         "D": "Otra idea irrelevante."
                     },
-                    "correct_answer": "A"
+                    "correct_answer": respuestas[i-1]
                 })
             text = json.dumps({"title": title, "questions": questions}, ensure_ascii=False)
             return text, len(text.split())
 
+        prompt_text = user[:80]
+        if "Mensaje actual del estudiante:" in user:
+            prompt_text = user.split("Mensaje actual del estudiante:")[-1].strip()[:80]
+            
         response = (
-            f"[MOCK LLM] He recibido tu pregunta: '{user[:80]}...'. "
-            "Esta es una respuesta simulada. Configura una API key real para respuestas verdaderas."
+            f"[MOCK LLM] He recibido tu mensaje: '{prompt_text}...'. "
+            "Esta es una respuesta simulada. Configura una API key real para conversar verdaderamente con el contenido."
         )
         return response, len(response.split())
 

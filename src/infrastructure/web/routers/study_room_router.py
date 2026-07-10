@@ -241,7 +241,7 @@ async def listar_mensajes_paginados_sala(
     await study_room_service.obtener_acceso_sala(sala_id, current_user_id)
     return await notebook_service.listar_mensajes_paginados(chat_id, limit, page)
 
-@router.post("/{sala_id}/chats/{chat_id}/messages", response_model=MessageResponseSchema, status_code=status.HTTP_201_CREATED)
+@router.post("/{sala_id}/chats/{chat_id}/messages", response_model=List[MessageResponseSchema], status_code=status.HTTP_201_CREATED)
 async def enviar_mensaje_chat_sala(
     sala_id: int,
     chat_id: int,
