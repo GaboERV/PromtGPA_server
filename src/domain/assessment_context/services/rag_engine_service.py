@@ -25,3 +25,12 @@ class RAGEngineService(Protocol):
     ) -> Examen:
         """Genera una plantilla de examen estructurada a partir del contexto textual."""
         ...
+
+    async def generar_respuesta_chat(
+        self,
+        prompt: str,
+        historial: List[dict],
+        texto_crudo: str
+    ) -> str:
+        """Genera una respuesta conversacional basada en el contexto y el historial del chat."""
+        ...

@@ -35,6 +35,10 @@ services:
       JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
       API_KEY_COOLDOWN_SECONDS: ${API_KEY_COOLDOWN_SECONDS:-60}
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
+      LLM_PROVIDER: ${LLM_PROVIDER:-mock}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
     depends_on:
       - db
       - redis

@@ -52,23 +52,28 @@ class MockLLMClient(ILLMClient):
             prompt_text = prompt.split('prompt:')[-1].strip() if 'prompt:' in prompt else prompt.strip()
             prompt_text = prompt_text.replace('\n', ' ').strip()
             questions = []
+            respuestas = ["B", "C", "B"]
             for i in range(1, 4):
                 questions.append({
                     "question_text": f"Según el prompt, ¿qué punto clave corresponde a la pregunta {i}?",
                     "opciones": {
-                        "A": f"{prompt_text[:35]} es la respuesta más probable.",
-                        "B": "Una alternativa secundaria.",
-                        "C": "Una opción distractora.",
+                        "A": "Una opción distractora.",
+                        "B": f"{prompt_text[:35]} es la respuesta más probable." if respuestas[i-1] == "B" else "Una alternativa secundaria.",
+                        "C": f"{prompt_text[:35]} es la respuesta más probable." if respuestas[i-1] == "C" else "Una opción distractora.",
                         "D": "Otra idea irrelevante."
                     },
-                    "correct_answer": "A"
+                    "correct_answer": respuestas[i-1]
                 })
             text = json.dumps({"title": title, "questions": questions}, ensure_ascii=False)
             return text, len(text.split())
 
+        prompt_text = user[:80]
+        if "Mensaje actual del estudiante:" in user:
+            prompt_text = user.split("Mensaje actual del estudiante:")[-1].strip()[:80]
+            
         response = (
-            f"[MOCK LLM] He recibido tu pregunta: '{user[:80]}...'. "
-            "Esta es una respuesta simulada. Configura una API key real para respuestas verdaderas."
+            f"[MOCK LLM] He recibido tu mensaje: '{prompt_text}...'. "
+            "Esta es una respuesta simulada. Configura una API key real para conversar verdaderamente con el contenido."
         )
         return response, len(response.split())
 
@@ -115,28 +120,92 @@ class ClaudeClient(ILLMClient):
 
 class OpenAIClient(ILLMClient):
     def __init__(self, api_key: str):
-        # TODO: implementar con openai library
-        self.api_key = api_key
+        try:
+            from openai import AsyncOpenAI
+            self.client = AsyncOpenAI(api_key=api_key)
+        except ImportError:
+            self.client = None
 
     async def complete(self, system: str, user: str, max_tokens: int = 1024) -> tuple[str, int]:
-        return await MockLLMClient().complete(system, user, max_tokens)
+        if not self.client:
+            return await MockLLMClient().complete(system, user, max_tokens)
+        response = await self.client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": system},
+                {"role": "user", "content": user}
+            ],
+            max_tokens=max_tokens,
+        )
+        text = response.choices[0].message.content if response.choices else ""
+        tokens = response.usage.completion_tokens if response.usage else 0
+        return text, tokens
 
     async def stream(self, system: str, user: str, max_tokens: int = 1024) -> AsyncGenerator[str, None]:
-        async for chunk in MockLLMClient().stream(system, user, max_tokens):
-            yield chunk
+        if not self.client:
+            async for chunk in MockLLMClient().stream(system, user, max_tokens):
+                yield chunk
+            return
+        stream = await self.client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": system},
+                {"role": "user", "content": user}
+            ],
+            max_tokens=max_tokens,
+            stream=True,
+        )
+        async for chunk in stream:
+            if chunk.choices and chunk.choices[0].delta.content:
+                yield chunk.choices[0].delta.content
 
 
 class GeminiClient(ILLMClient):
     def __init__(self, api_key: str):
-        # TODO: implementar con google-generativeai
-        self.api_key = api_key
+        try:
+            import google.generativeai as genai
+            genai.configure(api_key=api_key)
+            self.api_key = api_key
+            self.is_configured = True
+        except ImportError:
+            self.is_configured = False
 
     async def complete(self, system: str, user: str, max_tokens: int = 1024) -> tuple[str, int]:
-        return await MockLLMClient().complete(system, user, max_tokens)
+        if not self.is_configured:
+            return await MockLLMClient().complete(system, user, max_tokens)
+        try:
+            import google.generativeai as genai
+            model = genai.GenerativeModel('gemini-1.5-flash', system_instruction=system)
+            response = await model.generate_content_async(
+                user,
+                generation_config=genai.types.GenerationConfig(max_output_tokens=max_tokens)
+            )
+            tokens = response.usage_metadata.candidates_token_count if hasattr(response, 'usage_metadata') else len(response.text.split())
+            return response.text, tokens
+        except Exception as e:
+            print(f"[Gemini Error]: {e}")
+            return await MockLLMClient().complete(system, user, max_tokens)
 
     async def stream(self, system: str, user: str, max_tokens: int = 1024) -> AsyncGenerator[str, None]:
-        async for chunk in MockLLMClient().stream(system, user, max_tokens):
-            yield chunk
+        if not self.is_configured:
+            async for chunk in MockLLMClient().stream(system, user, max_tokens):
+                yield chunk
+            return
+        try:
+            import google.generativeai as genai
+            model = genai.GenerativeModel('gemini-1.5-flash', system_instruction=system)
+            response = await model.generate_content_async(
+                user,
+                generation_config=genai.types.GenerationConfig(max_output_tokens=max_tokens),
+                stream=True
+            )
+            async for chunk in response:
+                if chunk.text:
+                    yield chunk.text
+        except Exception as e:
+            print(f"[Gemini Stream Error]: {e}")
+            async for chunk in MockLLMClient().stream(system, user, max_tokens):
+                yield chunk
 
 
 class LLMClientFactory:

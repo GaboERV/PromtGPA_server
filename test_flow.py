@@ -184,8 +184,9 @@ print("[+] User message added to chat")
 resp = client.get(f"/notebooks/chats/{chat_id}/messages?page=1&limit=5", headers=headers_creator)
 assert resp.status_code == 200
 messages = resp.json()
-assert len(messages) == 1
+assert len(messages) == 2
 assert messages[0]["content"] == "Hola, ¿qué es un alcano?"
+assert messages[1]["role"] == "assistant"
 print(f"[+] Retrieved {len(messages)} message(s) under pagination constraints")
 
 
@@ -279,13 +280,15 @@ print("[+] Guest successfully listed room chats")
 # Guest lists messages paginated of study room chat
 resp = client.get(f"/study-rooms/{sala_id}/chats/{chat_id}/messages?page=1&limit=5", headers=headers_guest)
 assert resp.status_code == 200
-assert len(resp.json()) == 1
+assert len(resp.json()) == 2
 print("[+] Guest successfully listed chat messages paginated")
 
 # Guest sends a message to study room chat
 resp = client.post(f"/study-rooms/{sala_id}/chats/{chat_id}/messages", json={"content": "Hola desde la sala como invitado!"}, headers=headers_guest)
 assert resp.status_code == 201
-assert resp.json()["role"] == "user"
+assert len(resp.json()) == 2
+assert resp.json()[0]["role"] == "user"
+assert resp.json()[1]["role"] == "assistant"
 print("[+] Guest successfully sent a message in the room chat (Proxy allowed interaction!)")
 
 # Guest generates flashcards from specific file in study room

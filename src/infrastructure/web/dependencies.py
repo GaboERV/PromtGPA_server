@@ -49,10 +49,15 @@ def get_notebook_repository(session: AsyncSession = Depends(get_db_session)) -> 
     """Fábrica para instanciar el repositorio físico de cuadernos."""
     return SqlAlchemyCuadernoRepository(session)
 
+def get_rag_engine_service() -> RealRAGEngineService:
+    """Retorna la implementación real del motor RAG."""
+    return RealRAGEngineService()
+
 def get_notebook_service(
-    repository: SqlAlchemyCuadernoRepository = Depends(get_notebook_repository)
+    repository: SqlAlchemyCuadernoRepository = Depends(get_notebook_repository),
+    rag_engine: RealRAGEngineService = Depends(get_rag_engine_service)
 ) -> NotebookService:
-    return NotebookService(repository)
+    return NotebookService(repository, rag_engine)
 
 
 # --- Salas de Estudio ---
@@ -62,9 +67,10 @@ def get_study_room_repository(session: AsyncSession = Depends(get_db_session)) -
 
 def get_study_room_service(
     sala_repository: SqlAlchemySalaRepository = Depends(get_study_room_repository),
-    cuaderno_repository: SqlAlchemyCuadernoRepository = Depends(get_notebook_repository)
+    cuaderno_repository: SqlAlchemyCuadernoRepository = Depends(get_notebook_repository),
+    notebook_service: NotebookService = Depends(get_notebook_service)
 ) -> StudyRoomService:
-    return StudyRoomService(sala_repository, cuaderno_repository)
+    return StudyRoomService(sala_repository, cuaderno_repository, notebook_service)
 
 
 # --- Evaluaciones e IA ---
@@ -72,9 +78,7 @@ def get_examen_repository(session: AsyncSession = Depends(get_db_session)) -> Sq
     """Fábrica para instanciar el repositorio físico de exámenes."""
     return SqlAlchemyExamenRepository(session)
 
-def get_rag_engine_service() -> RealRAGEngineService:
-    """Retorna la implementación real del motor RAG."""
-    return RealRAGEngineService()
+# RAG service definition moved above NotebookService
 
 # TODO: use SimulatedRAGEngineService for local development with a feature flag if needed.
 

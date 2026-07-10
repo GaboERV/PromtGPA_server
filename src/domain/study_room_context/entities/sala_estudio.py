@@ -56,7 +56,7 @@ class SalaEstudioInvitado(LectorContenido, ParticipanteInteractivo):
         return await self._lector.obtener_texto_completo()
 
     # --- Implementación de ParticipanteInteractivo ---
-    async def enviar_mensaje_chat(self, chat_id: int, role: str, content: str) -> Mensaje:
+    async def enviar_mensaje_chat(self, chat_id: int, role: str, content: str) -> List[Mensaje]:
         return await self._interactivo.enviar_mensaje_chat(chat_id, role, content)
 
     # --- Métodos Bloqueados del Admin ---

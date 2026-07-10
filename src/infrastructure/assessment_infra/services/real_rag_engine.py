@@ -269,3 +269,31 @@ class RealRAGEngineService(RAGEngineService):
         )
         output, _ = await self.llm_client.complete(system, user, max_tokens=900)
         return _build_examen_from_response(output, prompt)
+
+    async def generar_respuesta_chat(
+        self,
+        prompt: str,
+        historial: List[dict],
+        texto_crudo: str
+    ) -> str:
+        context = _build_relevant_context(prompt, texto_crudo)
+        system = (
+            "Eres un tutor inteligente y servicial llamado PromptGPT. "
+            "Responde a las preguntas del estudiante utilizando el contexto proporcionado del cuaderno de estudio. "
+            "Si la respuesta no se encuentra en el contexto, puedes usar tu conocimiento general pero prioriza siempre el contexto."
+        )
+        
+        historial_str = ""
+        if historial:
+            historial_str = "Historial de la conversación:\n"
+            for msg in historial:
+                historial_str += f"- {msg['role'].capitalize()}: {msg['content']}\n"
+            historial_str += "\n"
+
+        user = (
+            f"Contexto del cuaderno:\n{context}\n\n"
+            f"{historial_str}"
+            f"Mensaje actual del estudiante: {prompt}"
+        )
+        output, _ = await self.llm_client.complete(system, user, max_tokens=650)
+        return output
