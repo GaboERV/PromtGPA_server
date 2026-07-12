@@ -297,3 +297,14 @@ class RealRAGEngineService(RAGEngineService):
         )
         output, _ = await self.llm_client.complete(system, user, max_tokens=650)
         return output
+
+    async def generar_resumen_por_contexto(self, texto_crudo: str) -> str:
+        system = "Eres un asistente académico experto en sintetizar y resumir información."
+        user = (
+            f"Por favor, lee el siguiente texto extraído de un documento de estudio "
+            f"y genera un resumen claro, estructurado y con los puntos más importantes "
+            f"utilizando viñetas (bullet points) para facilitar la lectura y el repaso.\n\n"
+            f"Texto:\n{texto_crudo[:15000]}"
+        )
+        output, _ = await self.llm_client.complete(system, user, max_tokens=1000)
+        return output

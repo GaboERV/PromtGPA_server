@@ -12,7 +12,7 @@ from ....domain.study_room_context.entities.sala_estudio import SalaEstudioInvit
 from ....domain.exceptions import PermisoDenegadoError
 
 # Importar schemas de otros routers
-from .notebook_router import FileResponseSchema, ChatResponseSchema, MessageResponseSchema, MessageCreateSchema
+from .notebook_router import FileResponseSchema, ChatResponseSchema, MessageResponseSchema, MessageCreateSchema, ResumenResponseSchema
 from .assessment_router import (
     FlashcardResponseSchema,
     ExamenResponseSchema,
@@ -225,7 +225,18 @@ async def listar_chats_sala(
     notebook_service: NotebookService = Depends(get_notebook_service)
 ):
     acceso = await study_room_service.obtener_acceso_sala(sala_id, current_user_id)
-    return await notebook_service.listar_chats(acceso.sala.notebook_id)
+    return await notebook_service.listar_chats(acceso.sala.notebook_id, current_user_id)
+
+@router.get("/{sala_id}/summaries", response_model=List[ResumenResponseSchema], status_code=status.HTTP_200_OK)
+async def listar_resumenes_sala(
+    sala_id: int,
+    current_user_id: int = Depends(get_current_user_id),
+    study_room_service: StudyRoomService = Depends(get_study_room_service),
+    notebook_service: NotebookService = Depends(get_notebook_service)
+):
+    acceso = await study_room_service.obtener_acceso_sala(sala_id, current_user_id)
+    # Los resúmenes son públicos para todos los participantes de la sala
+    return await notebook_service.listar_resumenes(acceso.sala.notebook_id)
 
 @router.get("/{sala_id}/chats/{chat_id}/messages", response_model=List[MessageResponseSchema], status_code=status.HTTP_200_OK)
 async def listar_mensajes_paginados_sala(
@@ -239,7 +250,7 @@ async def listar_mensajes_paginados_sala(
 ):
     # Valida la membresía de la sala
     await study_room_service.obtener_acceso_sala(sala_id, current_user_id)
-    return await notebook_service.listar_mensajes_paginados(chat_id, limit, page)
+    return await notebook_service.listar_mensajes_paginados(chat_id, current_user_id, limit, page)
 
 @router.post(
     "/{sala_id}/chats/{chat_id}/messages",
@@ -259,10 +270,14 @@ async def enviar_mensaje_chat_sala(
     acceso = await study_room_service.obtener_acceso_sala(sala_id, current_user_id)
     if isinstance(acceso, SalaEstudioInvitado):
         # Envía a través del proxy de invitado
-        return await acceso.enviar_mensaje_chat(chat_id, "user", schema.content)
+        return await acceso.enviar_mensaje_chat(chat_id, "user", schema.content, current_user_id)
     else:
         # Creador / Admin
-        return await notebook_service.agregar_mensaje_usuario(chat_id, schema.content)
+        return await notebook_service.agregar_mensaje_usuario(
+            chat_id=chat_id,
+            content=schema.content,
+            usuario_id=current_user_id
+        )
 
 @router.post("/{sala_id}/flashcards", response_model=List[FlashcardResponseSchema], status_code=status.HTTP_201_CREATED)
 async def generar_flashcards_sala(

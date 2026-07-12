@@ -388,31 +388,34 @@ Cookie `access_token`: `SameSite=None`, `Secure=True`, `HttpOnly=True`.
 | GET | `/notebooks/{id}/files` | Bearer/Cookie | Listar archivos |
 | DELETE | `/notebooks/files/{id}` | Bearer/Cookie | Eliminar archivo |
 | POST | `/notebooks/{id}/chats` | Bearer/Cookie | Crear chat IA |
-| GET | `/notebooks/{id}/chats` | Bearer/Cookie | Listar chats |
+| GET | `/notebooks/{id}/chats` | Bearer/Cookie | Listar chats privados |
 | DELETE | `/notebooks/chats/{id}` | Bearer/Cookie | Eliminar chat |
 | GET | `/notebooks/chats/{id}/messages` | Bearer/Cookie | Mensajes paginados |
 | POST | `/notebooks/chats/{id}/messages` | Bearer/Cookie | Enviar mensaje |
+| POST | `/notebooks/{id}/summaries` | Bearer/Cookie | Generar resumen RAG |
+| GET | `/notebooks/{id}/summaries` | Bearer/Cookie | Listar resúmenes |
+| DELETE | `/notebooks/summaries/{id}` | Bearer/Cookie | Eliminar resumen |
 
 ### Salas de Estudio (`/study-rooms`)
 
 | Método | Ruta | Auth | Descripción |
 |---|---|---|---|
 | POST | `/study-rooms` | Bearer/Cookie | Crear sala |
-| POST | `/study-rooms/join` | Bearer/Cookie | Unirse con código |
+| POST | `/study-rooms/join` | Bearer/Cookie | Unirse via código |
+| GET | `/study-rooms/{id}/acceso` | Bearer/Cookie | Check permisos |
+| GET | `/study-rooms/{id}/files` | Bearer/Cookie | Listar archivos sala |
+| POST | `/study-rooms/{id}/files` | Bearer/Cookie | Subir (Solo Admin) |
+| DELETE | `/study-rooms/{id}/files/{file_id}` | Bearer/Cookie | Eliminar (Solo Admin) |
+| GET | `/study-rooms/{id}/chats` | Bearer/Cookie | Listar chats de la sala (Privados por usuario) |
+| POST | `/study-rooms/{id}/chats/{chat_id}/messages` | Bearer/Cookie | Enviar mensaje en la sala |
+| GET | `/study-rooms/{id}/chats/{chat_id}/messages` | Bearer/Cookie | Mensajes paginados (Solo propios) |
+| POST | `/study-rooms/{id}/flashcards` | Bearer/Cookie | Generar flashcards |
+| POST | `/study-rooms/{id}/exam` | Bearer/Cookie | Generar examen (Solo Admin) |
+| GET | `/study-rooms/{id}/summaries` | Bearer/Cookie | Listar resúmenes de la sala |
 | GET | `/study-rooms/creadas` | Bearer/Cookie | Salas creadas |
 | GET | `/study-rooms/participa` | Bearer/Cookie | Salas donde participa |
 | GET | `/study-rooms/{id}` | Bearer/Cookie | Detalle sala |
 | GET | `/study-rooms/{id}/acceso` | Bearer/Cookie | Rol del usuario |
-| POST | `/study-rooms/{id}/files` | Bearer/Cookie | Subir archivo (solo creador) |
-| GET | `/study-rooms/{id}/files` | Bearer/Cookie | Listar archivos |
-| DELETE | `/study-rooms/{id}/files/{fid}` | Bearer/Cookie | Eliminar archivo (solo creador) |
-| GET | `/study-rooms/{id}/chats` | Bearer/Cookie | Chats colaborativos |
-| GET | `/study-rooms/{id}/chats/{cid}/messages` | Bearer/Cookie | Mensajes chat |
-| POST | `/study-rooms/{id}/chats/{cid}/messages` | Bearer/Cookie | Enviar mensaje |
-| POST | `/study-rooms/{id}/flashcards` | Bearer/Cookie | Crear flashcard |
-| GET | `/study-rooms/{id}/flashcards` | Bearer/Cookie | Listar flashcards |
-| POST | `/study-rooms/{id}/exam` | Bearer/Cookie | Generar examen (solo creador) |
-| GET | `/study-rooms/{id}/exams` | Bearer/Cookie | Listar exámenes |
 
 ### Evaluaciones IA (`/assessments`)
 

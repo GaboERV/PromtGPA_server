@@ -20,6 +20,7 @@ from ...domain.notebook_context.interfaces.lector_contenido import LectorConteni
 from ...domain.notebook_context.interfaces.participante_interactivo import ParticipanteInteractivo
 from ...domain.notebook_context.entities.archivo import ArchivoResumen
 from ...domain.notebook_context.entities.chat import ChatResumen, Mensaje
+from ...domain.notebook_context.entities.resumen import Resumen
 from ..notebook_cases.notebook_services import NotebookService
 
 
@@ -37,11 +38,15 @@ class RepositoryLectorContenido(LectorContenido):
             raise CuadernoNoEncontradoError()
         return cuaderno.lista_archivos
 
-    async def listar_chats(self) -> List[ChatResumen]:
+    async def listar_chats(self, usuario_id: int) -> List[ChatResumen]:
         cuaderno = await self.repo.get_by_id(self.notebook_id)
         if not cuaderno:
             raise CuadernoNoEncontradoError()
-        return cuaderno.lista_chats
+        # Filtrar solo los chats del usuario activo para mantener aislamiento en la sala
+        return [c for c in cuaderno.lista_chats if c.usuario_id == usuario_id]
+
+    async def listar_resumenes(self) -> List[Resumen]:
+        return await self.repo.list_resumenes_by_notebook_id(self.notebook_id)
 
     async def obtener_texto_completo(self) -> str:
         archivos = await self.repo.list_archivos_by_notebook_id(self.notebook_id)
@@ -55,9 +60,9 @@ class RepositoryParticipanteInteractivo(ParticipanteInteractivo):
     def __init__(self, notebook_service: NotebookService):
         self.notebook_service = notebook_service
 
-    async def enviar_mensaje_chat(self, chat_id: int, role: str, content: str) -> List[Mensaje]:
+    async def enviar_mensaje_chat(self, chat_id: int, role: str, content: str, usuario_id: int) -> List[Mensaje]:
         # Ignoramos el "role" porque la IA contesta automáticamente con agregar_mensaje_usuario
-        return await self.notebook_service.agregar_mensaje_usuario(chat_id, content)
+        return await self.notebook_service.agregar_mensaje_usuario(chat_id, content, usuario_id)
 
 
 class StudyRoomService:

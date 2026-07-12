@@ -5,6 +5,7 @@ from ...exceptions import PermisoDenegadoError
 from ...notebook_context.entities.cuaderno import Cuaderno
 from ...notebook_context.entities.archivo import ArchivoResumen
 from ...notebook_context.entities.chat import ChatResumen, Mensaje
+from ...notebook_context.entities.resumen import Resumen
 from ...notebook_context.interfaces.lector_contenido import LectorContenido
 from ...notebook_context.interfaces.participante_interactivo import ParticipanteInteractivo
 
@@ -49,15 +50,18 @@ class SalaEstudioInvitado(LectorContenido, ParticipanteInteractivo):
     async def listar_archivos(self) -> List[ArchivoResumen]:
         return await self._lector.listar_archivos()
 
-    async def listar_chats(self) -> List[ChatResumen]:
-        return await self._lector.listar_chats()
+    async def listar_chats(self, usuario_id: int) -> List[ChatResumen]:
+        return await self._lector.listar_chats(usuario_id)
+
+    async def listar_resumenes(self) -> List[Resumen]:
+        return await self._lector.listar_resumenes()
 
     async def obtener_texto_completo(self) -> str:
         return await self._lector.obtener_texto_completo()
 
     # --- Implementación de ParticipanteInteractivo ---
-    async def enviar_mensaje_chat(self, chat_id: int, role: str, content: str) -> List[Mensaje]:
-        return await self._interactivo.enviar_mensaje_chat(chat_id, role, content)
+    async def enviar_mensaje_chat(self, chat_id: int, role: str, content: str, usuario_id: int) -> List[Mensaje]:
+        return await self._interactivo.enviar_mensaje_chat(chat_id, role, content, usuario_id)
 
     # --- Métodos Bloqueados del Admin ---
     async def agregar_archivo(self, filename: str, content: str, file_type: str):

@@ -26,6 +26,18 @@ class RAGEngineService(Protocol):
         """Genera una plantilla de examen estructurada a partir del contexto textual."""
         ...
 
+    async def evaluar_respuesta(self, question: str, user_answer: str, reference_answer: str) -> bool:
+        """
+        Evalúa si la respuesta del usuario es conceptualmente correcta.
+        """
+        ...
+        
+    async def generar_resumen_por_contexto(self, texto_crudo: str) -> str:
+        """
+        Genera un resumen estructurado a partir del texto de un documento.
+        """
+        ...
+
     async def generar_respuesta_chat(
         self,
         prompt: str,
