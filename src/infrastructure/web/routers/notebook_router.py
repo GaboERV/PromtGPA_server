@@ -64,6 +64,16 @@ class MessageResponseSchema(BaseModel):
     class Config:
         from_attributes = True
 
+class ResumenResponseSchema(BaseModel):
+    id: int
+    content: str
+    notebook_id: int
+    archivo_id: Optional[int]
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
 
 # --- Endpoints Cuadernos ---
 
@@ -188,7 +198,8 @@ async def crear_chat(
 ):
     chat_id = await notebook_service.crear_chat(
         title=schema.title,
-        notebook_id=notebook_id
+        notebook_id=notebook_id,
+        usuario_id=current_user_id
     )
     return {"id": chat_id, "message": "Chat creado exitosamente"}
 
@@ -198,7 +209,7 @@ async def listar_chats(
     current_user_id: int = Depends(get_current_user_id),
     notebook_service: NotebookService = Depends(get_notebook_service)
 ):
-    return await notebook_service.listar_chats(notebook_id)
+    return await notebook_service.listar_chats(notebook_id, current_user_id)
 
 @router.delete("/chats/{chat_id}", status_code=status.HTTP_200_OK)
 async def eliminar_chat(
@@ -206,7 +217,7 @@ async def eliminar_chat(
     current_user_id: int = Depends(get_current_user_id),
     notebook_service: NotebookService = Depends(get_notebook_service)
 ):
-    await notebook_service.eliminar_chat(chat_id)
+    await notebook_service.eliminar_chat(chat_id, current_user_id)
     return {"message": "Chat eliminado exitosamente"}
 
 @router.get("/chats/{chat_id}/messages", response_model=List[MessageResponseSchema], status_code=status.HTTP_200_OK)
@@ -219,6 +230,7 @@ async def listar_mensajes_paginados(
 ):
     return await notebook_service.listar_mensajes_paginados(
         chat_id=chat_id,
+        usuario_id=current_user_id,
         limit=limit,
         page=page
     )
@@ -238,5 +250,35 @@ async def agregar_mensaje_usuario(
 ):
     return await notebook_service.agregar_mensaje_usuario(
         chat_id=chat_id,
-        content=schema.content
+        content=schema.content,
+        usuario_id=current_user_id
     )
+
+# --- Endpoints Resumenes ---
+
+@router.post("/{notebook_id}/summaries", status_code=status.HTTP_201_CREATED)
+async def generar_resumen(
+    notebook_id: int,
+    archivo_id: Optional[int] = None,
+    current_user_id: int = Depends(get_current_user_id),
+    notebook_service: NotebookService = Depends(get_notebook_service)
+):
+    resumen_id = await notebook_service.generar_y_guardar_resumen(notebook_id, archivo_id)
+    return {"id": resumen_id, "message": "Resumen generado exitosamente"}
+
+@router.get("/{notebook_id}/summaries", response_model=List[ResumenResponseSchema], status_code=status.HTTP_200_OK)
+async def listar_resumenes(
+    notebook_id: int,
+    current_user_id: int = Depends(get_current_user_id),
+    notebook_service: NotebookService = Depends(get_notebook_service)
+):
+    return await notebook_service.listar_resumenes(notebook_id)
+
+@router.delete("/summaries/{resumen_id}", status_code=status.HTTP_200_OK)
+async def eliminar_resumen(
+    resumen_id: int,
+    current_user_id: int = Depends(get_current_user_id),
+    notebook_service: NotebookService = Depends(get_notebook_service)
+):
+    await notebook_service.eliminar_resumen(resumen_id)
+    return {"message": "Resumen eliminado exitosamente"}

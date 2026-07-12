@@ -154,7 +154,7 @@ resp = client.post(
     files={"file": ("slides.pdf", b"pdfbinarydata", "application/pdf")},
     headers=headers_creator
 )
-assert resp.status_code == 201
+assert resp.status_code == 201, f"Expected 201, got {resp.status_code}: {resp.text}"
 file2_id = resp.json()["id"]
 print(f"[+] File slides.pdf uploaded and simulated to Markdown (ID: {file2_id})")
 
@@ -223,6 +223,24 @@ assert len(examen["preguntas"]) == 3
 print(f"[+] Exam template has {len(examen['preguntas'])} questions with option dictionaries")
 
 
+# --- 4.5. Creator: Summary Generation ---
+print_step("Creator: Generating Summaries")
+
+# Generate Summary from notebook context
+resp = client.post(f"/notebooks/{notebook_id}/summaries", headers=headers_creator)
+assert resp.status_code == 201
+resumen_id = resp.json()["id"]
+print(f"[+] Generated Summary (ID: {resumen_id})")
+
+# List Summaries
+resp = client.get(f"/notebooks/{notebook_id}/summaries", headers=headers_creator)
+assert resp.status_code == 200
+summaries = resp.json()
+assert len(summaries) == 1
+assert "content" in summaries[0]
+print("[+] Listed summaries correctly")
+
+
 # --- 5. Study Room Collaboration & Access Control Proxy ---
 print_step("Study Rooms: Access Code and Write Proxy Validation")
 
@@ -274,22 +292,40 @@ print("[+] Guest successfully listed room files")
 # Guest lists chats of study room
 resp = client.get(f"/study-rooms/{sala_id}/chats", headers=headers_guest)
 assert resp.status_code == 200
-assert len(resp.json()) == 1
-print("[+] Guest successfully listed room chats")
+assert len(resp.json()) == 0
+print("[+] Guest successfully listed room chats (0 initially)")
 
-# Guest lists messages paginated of study room chat
+# Guest tries to list messages paginated of Creator's chat
 resp = client.get(f"/study-rooms/{sala_id}/chats/{chat_id}/messages?page=1&limit=5", headers=headers_guest)
-assert resp.status_code == 200
-assert len(resp.json()) == 2
-print("[+] Guest successfully listed chat messages paginated")
+assert resp.status_code == 403, f"Expected 403, got {resp.status_code}"
+print("[+] Guest successfully blocked from reading creator's chat messages (Chat isolation working!)")
 
-# Guest sends a message to study room chat
+# Guest tries to send a message to Creator's chat
 resp = client.post(f"/study-rooms/{sala_id}/chats/{chat_id}/messages", json={"content": "Hola desde la sala como invitado!"}, headers=headers_guest)
+assert resp.status_code == 403, f"Expected 403, got {resp.status_code}"
+print("[+] Guest successfully blocked from writing to creator's chat (Chat isolation working!)")
+
+# Test Chat Isolation:
+# 1. Guest creates a new chat in the room
+resp = client.post(f"/notebooks/{notebook_id}/chats", json={"title": "Chat Privado de Invitado"}, headers=headers_guest)
 assert resp.status_code == 201
-assert len(resp.json()) == 2
-assert resp.json()[0]["role"] == "user"
-assert resp.json()[1]["role"] == "assistant"
-print("[+] Guest successfully sent a message in the room chat (Proxy allowed interaction!)")
+guest_chat_id = resp.json()["id"]
+
+# 2. Guest lists their chats in the room, should see their chat
+resp = client.get(f"/study-rooms/{sala_id}/chats", headers=headers_guest)
+assert resp.status_code == 200
+guest_chats = resp.json()
+assert len(guest_chats) == 1
+assert guest_chats[0]["id"] == guest_chat_id
+print("[+] Chat isolation: Guest only sees their own chats in the study room")
+
+# 3. Creator lists their chats in the room, should NOT see guest's chat
+resp = client.get(f"/study-rooms/{sala_id}/chats", headers=headers_creator)
+assert resp.status_code == 200
+creator_chats = resp.json()
+assert len(creator_chats) == 1
+assert creator_chats[0]["id"] == chat_id
+print("[+] Chat isolation: Creator only sees their own chats, and NOT guest's chats")
 
 # Guest generates flashcards from specific file in study room
 resp = client.post(f"/study-rooms/{sala_id}/flashcards", json={
@@ -376,6 +412,19 @@ assert attempts_guest[0]["id"] == intento_guest["id"]
 print("[+] Guest only sees their own attempts (Privacy verified!)")
 
 
+# --- 7. Leave Study Room ---
+print_step("Guest Leaving Study Room")
+
+# Guest leaves the study room
+resp = client.delete(f"/study-rooms/{sala_id}/leave", headers=headers_guest)
+assert resp.status_code == 200
+print("[+] Guest successfully left the study room")
+
+# Guest tries to list files in the study room (should be 403 because they no longer have access)
+resp = client.get(f"/study-rooms/{sala_id}/files", headers=headers_guest)
+assert resp.status_code == 403, f"Expected 403, got {resp.status_code}"
+print("[+] Guest is blocked from accessing the study room after leaving")
+
 # --- 8. Progress and Metrics Module Tests ---
 print_step("Progress and Daily Activity Logs")
 
@@ -403,8 +452,8 @@ print("[+] Daily activity log aggregation verified successfully")
 # --- 9. API Keys Module Tests (Single-use Validation) ---
 print_step("API Keys and Single-use Authorization Header")
 
-# Wait 1.1 seconds since the notebook creation key was generated, to reset rate limit
-time.sleep(1.1)
+# Wait 2.0 seconds since the notebook creation key was generated, to reset rate limit
+time.sleep(2.0)
 
 # POST /api-keys
 resp = client.post("/api-keys", json={"title": "External Service Key"}, headers=headers_creator)
@@ -438,12 +487,12 @@ assert resp.status_code == 401
 assert "consumida" in resp.json()["detail"]
 print("[+] SUCCESS: Second consumption of API Key was BLOCKED (Single-use validated!)")
 
-# Wait 1.1 seconds to avoid rate limiting for the next generation
-time.sleep(1.1)
+# Wait 2.0 seconds to avoid rate limiting for the next generation
+time.sleep(2.0)
 
 # Create a second key and deactivate it
 resp = client.post("/api-keys", json={"title": "Revocable Key"}, headers=headers_creator)
-assert resp.status_code == 201
+assert resp.status_code == 201, f"Expected 201, got {resp.status_code}: {resp.text}"
 rev_key = resp.json()["api_key"]
 rev_jti = resp.json()["jti"]
 

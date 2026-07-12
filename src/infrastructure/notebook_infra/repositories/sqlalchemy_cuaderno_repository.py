@@ -9,7 +9,8 @@ from ....domain.notebook_context.entities.cuaderno import Cuaderno
 from ....domain.notebook_context.entities.archivo import Archivo, ArchivoResumen
 from ....domain.notebook_context.entities.chat import Chat, ChatResumen, Mensaje
 from ....domain.notebook_context.entities.flashcard import Flashcard, FlashcardResumen
-from ..models.notebook_orm import NotebookORM, FileORM, ChatORM, MessageORM, FlashcardORM
+from ....domain.notebook_context.entities.resumen import Resumen, ResumenResumen
+from ..models.notebook_orm import NotebookORM, FileORM, ChatORM, MessageORM, FlashcardORM, ResumenORM
 
 class SqlAlchemyCuadernoRepository(CuadernoRepository):
     def __init__(self, session: AsyncSession):
@@ -17,8 +18,9 @@ class SqlAlchemyCuadernoRepository(CuadernoRepository):
 
     def _to_domain(self, orm: NotebookORM) -> Cuaderno:
         archivos = [ArchivoResumen(id=f.id, filename=f.filename) for f in orm.files]
-        chats = [ChatResumen(id=c.id, title=c.title) for c in orm.chats]
+        chats = [ChatResumen(id=c.id, title=c.title, usuario_id=c.usuario_id) for c in orm.chats]
         flashcards = [FlashcardResumen(id=fl.id, question=fl.question) for fl in orm.flashcards]
+        resumenes = [ResumenResumen(id=r.id, content_snippet=r.content[:100], created_at=r.created_at) for r in getattr(orm, 'resumenes', [])]
         return Cuaderno(
             id=orm.id,
             title=orm.title,
@@ -37,7 +39,8 @@ class SqlAlchemyCuadernoRepository(CuadernoRepository):
             .options(
                 selectinload(NotebookORM.files),
                 selectinload(NotebookORM.chats),
-                selectinload(NotebookORM.flashcards)
+                selectinload(NotebookORM.flashcards),
+                selectinload(NotebookORM.resumenes)
             )
         )
         result = await self.session.execute(stmt)
@@ -51,7 +54,8 @@ class SqlAlchemyCuadernoRepository(CuadernoRepository):
             .options(
                 selectinload(NotebookORM.files),
                 selectinload(NotebookORM.chats),
-                selectinload(NotebookORM.flashcards)
+                selectinload(NotebookORM.flashcards),
+                selectinload(NotebookORM.resumenes)
             )
         )
         result = await self.session.execute(stmt)
@@ -135,7 +139,7 @@ class SqlAlchemyCuadernoRepository(CuadernoRepository):
         stmt = select(ChatORM).where(ChatORM.id == chat_id)
         result = await self.session.execute(stmt)
         c = result.scalar_one_or_none()
-        return Chat(c.id, c.title, c.notebook_id, c.created_at) if c else None
+        return Chat(c.id, c.title, c.notebook_id, c.usuario_id, c.created_at) if c else None
 
     async def save_chat(self, chat: Chat) -> None:
         orm = None
@@ -148,6 +152,7 @@ class SqlAlchemyCuadernoRepository(CuadernoRepository):
             orm = ChatORM(
                 title=chat.title,
                 notebook_id=chat.notebook_id,
+                usuario_id=chat.usuario_id,
                 created_at=chat.created_at
             )
             self.session.add(orm)
@@ -163,11 +168,13 @@ class SqlAlchemyCuadernoRepository(CuadernoRepository):
         if orm:
             await self.session.delete(orm)
 
-    async def list_chats_by_notebook_id(self, notebook_id: int) -> List[Chat]:
+    async def list_chats_by_notebook_id(self, notebook_id: int, usuario_id: Optional[int] = None) -> List[Chat]:
         stmt = select(ChatORM).where(ChatORM.notebook_id == notebook_id)
+        if usuario_id is not None:
+            stmt = stmt.where(ChatORM.usuario_id == usuario_id)
         result = await self.session.execute(stmt)
         return [
-            Chat(c.id, c.title, c.notebook_id, c.created_at)
+            Chat(c.id, c.title, c.notebook_id, c.usuario_id, c.created_at)
             for c in result.scalars().all()
         ]
 
@@ -215,4 +222,46 @@ class SqlAlchemyCuadernoRepository(CuadernoRepository):
         return [
             Flashcard(fl.id, fl.question, fl.answer, fl.notebook_id, fl.created_at)
             for fl in result.scalars().all()
+        ]
+
+    # --- Resumenes ---
+    async def get_resumen_by_id(self, resumen_id: int) -> Optional[Resumen]:
+        stmt = select(ResumenORM).where(ResumenORM.id == resumen_id)
+        result = await self.session.execute(stmt)
+        r = result.scalar_one_or_none()
+        return Resumen(r.id, r.content, r.notebook_id, r.archivo_id, r.created_at) if r else None
+
+    async def save_resumen(self, resumen: Resumen) -> None:
+        orm = None
+        if resumen.id is not None:
+            stmt = select(ResumenORM).where(ResumenORM.id == resumen.id)
+            result = await self.session.execute(stmt)
+            orm = result.scalar_one_or_none()
+
+        if orm is None:
+            orm = ResumenORM(
+                content=resumen.content,
+                notebook_id=resumen.notebook_id,
+                archivo_id=resumen.archivo_id,
+                created_at=resumen.created_at
+            )
+            self.session.add(orm)
+            await self.session.flush()
+            resumen.id = orm.id
+        else:
+            orm.content = resumen.content
+
+    async def delete_resumen(self, resumen_id: int) -> None:
+        stmt = select(ResumenORM).where(ResumenORM.id == resumen_id)
+        result = await self.session.execute(stmt)
+        orm = result.scalar_one_or_none()
+        if orm:
+            await self.session.delete(orm)
+
+    async def list_resumenes_by_notebook_id(self, notebook_id: int) -> List[Resumen]:
+        stmt = select(ResumenORM).where(ResumenORM.notebook_id == notebook_id)
+        result = await self.session.execute(stmt)
+        return [
+            Resumen(r.id, r.content, r.notebook_id, r.archivo_id, r.created_at)
+            for r in result.scalars().all()
         ]

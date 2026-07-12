@@ -5,12 +5,14 @@ from datetime import datetime
 class ChatResumen:
     id: int
     title: str
+    usuario_id: int
 
 @dataclass
 class Chat:
     id: int
     title: str
     notebook_id: int
+    usuario_id: int
     created_at: datetime
 
 @dataclass

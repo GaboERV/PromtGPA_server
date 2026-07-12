@@ -20,6 +20,7 @@ class NotebookORM(Base):
     flashcards: Mapped[List["FlashcardORM"]] = relationship("FlashcardORM", back_populates="notebook", cascade="all, delete-orphan")
     examenes: Mapped[List["ExamenORM"]] = relationship("ExamenORM", back_populates="notebook", cascade="all, delete-orphan")
     salas_estudio: Mapped[List["SalaEstudioORM"]] = relationship("SalaEstudioORM", back_populates="notebook", cascade="all, delete-orphan")
+    resumenes: Mapped[List["ResumenORM"]] = relationship("ResumenORM", back_populates="notebook", cascade="all, delete-orphan")
 
 class FileORM(Base):
     __tablename__ = "files"
@@ -40,6 +41,7 @@ class ChatORM(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     notebook_id: Mapped[int] = mapped_column(ForeignKey("notebooks.id", ondelete="CASCADE"), nullable=False)
+    usuario_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
 
     notebook: Mapped[NotebookORM] = relationship(NotebookORM, back_populates="chats")
@@ -66,3 +68,14 @@ class FlashcardORM(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
 
     notebook: Mapped[NotebookORM] = relationship(NotebookORM, back_populates="flashcards")
+
+class ResumenORM(Base):
+    __tablename__ = "resumenes"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    notebook_id: Mapped[int] = mapped_column(ForeignKey("notebooks.id", ondelete="CASCADE"), nullable=False)
+    archivo_id: Mapped[Optional[int]] = mapped_column(ForeignKey("files.id", ondelete="CASCADE"), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+
+    notebook: Mapped[NotebookORM] = relationship(NotebookORM, back_populates="resumenes")
