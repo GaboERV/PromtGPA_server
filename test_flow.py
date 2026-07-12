@@ -412,6 +412,19 @@ assert attempts_guest[0]["id"] == intento_guest["id"]
 print("[+] Guest only sees their own attempts (Privacy verified!)")
 
 
+# --- 7. Leave Study Room ---
+print_step("Guest Leaving Study Room")
+
+# Guest leaves the study room
+resp = client.delete(f"/study-rooms/{sala_id}/leave", headers=headers_guest)
+assert resp.status_code == 200
+print("[+] Guest successfully left the study room")
+
+# Guest tries to list files in the study room (should be 403 because they no longer have access)
+resp = client.get(f"/study-rooms/{sala_id}/files", headers=headers_guest)
+assert resp.status_code == 403, f"Expected 403, got {resp.status_code}"
+print("[+] Guest is blocked from accessing the study room after leaving")
+
 # --- 8. Progress and Metrics Module Tests ---
 print_step("Progress and Daily Activity Logs")
 
@@ -439,8 +452,8 @@ print("[+] Daily activity log aggregation verified successfully")
 # --- 9. API Keys Module Tests (Single-use Validation) ---
 print_step("API Keys and Single-use Authorization Header")
 
-# Wait 1.1 seconds since the notebook creation key was generated, to reset rate limit
-time.sleep(1.1)
+# Wait 2.0 seconds since the notebook creation key was generated, to reset rate limit
+time.sleep(2.0)
 
 # POST /api-keys
 resp = client.post("/api-keys", json={"title": "External Service Key"}, headers=headers_creator)
@@ -474,12 +487,12 @@ assert resp.status_code == 401
 assert "consumida" in resp.json()["detail"]
 print("[+] SUCCESS: Second consumption of API Key was BLOCKED (Single-use validated!)")
 
-# Wait 1.1 seconds to avoid rate limiting for the next generation
-time.sleep(1.1)
+# Wait 2.0 seconds to avoid rate limiting for the next generation
+time.sleep(2.0)
 
 # Create a second key and deactivate it
 resp = client.post("/api-keys", json={"title": "Revocable Key"}, headers=headers_creator)
-assert resp.status_code == 201
+assert resp.status_code == 201, f"Expected 201, got {resp.status_code}: {resp.text}"
 rev_key = resp.json()["api_key"]
 rev_jti = resp.json()["jti"]
 

@@ -163,3 +163,17 @@ class StudyRoomService:
             lector=lector,
             interactivo=interactivo
         )
+
+    async def abandonar_sala(self, sala_id: int, usuario_id: int) -> None:
+        sala = await self.sala_repository.get_by_id(sala_id)
+        if not sala:
+            raise SalaNoEncontradaError()
+
+        if sala.creado_por_id == usuario_id:
+            raise PermisoDenegadoError("El creador de la sala no puede abandonarla. Debe eliminarla.")
+
+        participante = await self.sala_repository.get_participante(sala_id, usuario_id)
+        if not participante:
+            raise PermisoDenegadoError("No eres miembro de esta sala de estudio.")
+
+        await self.sala_repository.delete_participante(sala_id, usuario_id)

@@ -94,6 +94,15 @@ async def unirse_a_sala(
         "message": "Te has unido a la sala de estudio exitosamente"
     }
 
+@router.delete("/{sala_id}/leave", status_code=status.HTTP_200_OK)
+async def abandonar_sala(
+    sala_id: int,
+    current_user_id: int = Depends(get_current_user_id),
+    study_room_service: StudyRoomService = Depends(get_study_room_service)
+):
+    await study_room_service.abandonar_sala(sala_id, current_user_id)
+    return {"message": "Has abandonado la sala de estudio"}
+
 @router.get("/creadas", response_model=List[StudyRoomResponseSchema], status_code=status.HTTP_200_OK)
 async def listar_salas_creadas(
     current_user_id: int = Depends(get_current_user_id),

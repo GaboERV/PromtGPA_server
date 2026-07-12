@@ -402,6 +402,7 @@ Cookie `access_token`: `SameSite=None`, `Secure=True`, `HttpOnly=True`.
 |---|---|---|---|
 | POST | `/study-rooms` | Bearer/Cookie | Crear sala |
 | POST | `/study-rooms/join` | Bearer/Cookie | Unirse via código |
+| DELETE | `/study-rooms/{id}/leave` | Bearer/Cookie | Abandonar sala |
 | GET | `/study-rooms/{id}/acceso` | Bearer/Cookie | Check permisos |
 | GET | `/study-rooms/{id}/files` | Bearer/Cookie | Listar archivos sala |
 | POST | `/study-rooms/{id}/files` | Bearer/Cookie | Subir (Solo Admin) |
