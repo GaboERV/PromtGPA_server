@@ -175,7 +175,7 @@ class GeminiClient(ILLMClient):
             return await MockLLMClient().complete(system, user, max_tokens)
         try:
             import google.generativeai as genai
-            model = genai.GenerativeModel('gemini-1.5-flash', system_instruction=system)
+            model = genai.GenerativeModel('gemini-3.5-flash', system_instruction=system)
             response = await model.generate_content_async(
                 user,
                 generation_config=genai.types.GenerationConfig(max_output_tokens=max_tokens)
@@ -193,7 +193,7 @@ class GeminiClient(ILLMClient):
             return
         try:
             import google.generativeai as genai
-            model = genai.GenerativeModel('gemini-1.5-flash', system_instruction=system)
+            model = genai.GenerativeModel('gemini-3.5-flash', system_instruction=system)
             response = await model.generate_content_async(
                 user,
                 generation_config=genai.types.GenerationConfig(max_output_tokens=max_tokens),
