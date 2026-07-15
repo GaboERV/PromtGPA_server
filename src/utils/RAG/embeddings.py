@@ -20,7 +20,8 @@ class EmbeddingService:
         if self._model is None:
             try:
                 from sentence_transformers import SentenceTransformer
-                self._model = SentenceTransformer(os.getenv("EMBEDDING_MODEL"))
+                model_name = os.getenv("EMBEDDING_MODEL", "paraphrase-multilingual-MiniLM-L12-v2")
+                self._model = SentenceTransformer(model_name)
             except Exception:
                 self._model = None
 
