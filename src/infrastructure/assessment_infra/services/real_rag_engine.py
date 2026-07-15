@@ -326,7 +326,9 @@ class RealRAGEngineService(RAGEngineService):
         user = (
             f"Por favor, lee el siguiente texto extraído de un documento de estudio "
             f"y genera un resumen claro, estructurado y con los puntos más importantes "
-            f"utilizando viñetas (bullet points) para facilitar la lectura y el repaso.\n\n"
+            f"utilizando viñetas (bullet points) para facilitar la lectura y el repaso.\n"
+            f"IMPORTANTE: NO incluyas introducciones, saludos, ni frases como 'Aquí tienes el resumen'. "
+            f"Empieza directamente con el contenido del resumen en formato Markdown.\n\n"
             f"Texto:\n{texto_crudo[:15000]}"
         )
         output, _ = await self.llm_client.complete(system, user, max_tokens=1000)
