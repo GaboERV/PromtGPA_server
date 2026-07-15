@@ -6,6 +6,7 @@ from pydantic import BaseModel
 from ..interceptors.auth_interceptor import get_current_user_id, get_current_user_id_with_api_key
 from ..dependencies import get_notebook_service
 from ....app.notebook_cases.notebook_services import NotebookService
+from ....utils.RAG.pdf_parser import extract_pages
 
 router = APIRouter(prefix="/notebooks", tags=["Cuadernos"])
 
@@ -151,8 +152,20 @@ async def subir_archivo(
             content = file_bytes.decode("utf-8")
         except UnicodeDecodeError:
             content = file_bytes.decode("latin-1")
+    elif ext == "pdf":
+        pages = extract_pages(file_bytes)
+        if pages:
+            content_lines = [f"# Documento: {filename}\n"]
+            for page_num, text in pages:
+                content_lines.append(f"\n## Página {page_num}\n{text}")
+            content = "\n".join(content_lines)
+        else:
+            content = (
+                f"# Documento: {filename}\n\n"
+                f"**Nota:** Se intentó extraer texto del PDF pero parece estar vacío o contener solo imágenes.\n"
+            )
     else:
-        # Para PDF, DOCX u otros formatos, simulamos la extracción de contenido estructurado en Markdown
+        # Para DOCX u otros formatos, simulamos la extracción
         content = (
             f"# Documento: {filename}\n\n"
             f"**Tipo de archivo:** {ext.upper()}\n"

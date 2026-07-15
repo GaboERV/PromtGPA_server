@@ -10,6 +10,7 @@ from ....app.notebook_cases.notebook_services import NotebookService
 from ....app.assessment_cases.assessment_services import AssessmentService
 from ....domain.study_room_context.entities.sala_estudio import SalaEstudioInvitado, SalaEstudioAdmin
 from ....domain.exceptions import PermisoDenegadoError
+from ....utils.RAG.pdf_parser import extract_pages
 
 # Importar schemas de otros routers
 from .notebook_router import FileResponseSchema, ChatResponseSchema, MessageResponseSchema, MessageCreateSchema, ResumenResponseSchema
@@ -174,6 +175,18 @@ async def agregar_archivo_sala(
             content = file_bytes.decode("utf-8")
         except UnicodeDecodeError:
             content = file_bytes.decode("latin-1")
+    elif ext == "pdf":
+        pages = extract_pages(file_bytes)
+        if pages:
+            content_lines = [f"# Documento: {filename}\n"]
+            for page_num, text in pages:
+                content_lines.append(f"\n## Página {page_num}\n{text}")
+            content = "\n".join(content_lines)
+        else:
+            content = (
+                f"# Documento: {filename}\n\n"
+                f"**Nota:** Se intentó extraer texto del PDF pero parece estar vacío o contener solo imágenes.\n"
+            )
     else:
         content = (
             f"# Documento: {filename}\n\n"
