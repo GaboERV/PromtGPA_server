@@ -175,10 +175,19 @@ class GeminiClient(ILLMClient):
             return await MockLLMClient().complete(system, user, max_tokens)
         try:
             import google.generativeai as genai
+            from google.generativeai.types import HarmCategory, HarmBlockThreshold
+            
+            safety_settings = {
+                HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
+                HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
+                HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
+                HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
+            }
             model = genai.GenerativeModel('gemini-3.5-flash', system_instruction=system)
             response = await model.generate_content_async(
                 user,
-                generation_config=genai.types.GenerationConfig(max_output_tokens=max_tokens)
+                generation_config=genai.types.GenerationConfig(max_output_tokens=max_tokens),
+                safety_settings=safety_settings
             )
             tokens = response.usage_metadata.candidates_token_count if hasattr(response, 'usage_metadata') else len(response.text.split())
             return response.text, tokens
@@ -193,10 +202,19 @@ class GeminiClient(ILLMClient):
             return
         try:
             import google.generativeai as genai
+            from google.generativeai.types import HarmCategory, HarmBlockThreshold
+            
+            safety_settings = {
+                HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
+                HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
+                HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
+                HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
+            }
             model = genai.GenerativeModel('gemini-3.5-flash', system_instruction=system)
             response = await model.generate_content_async(
                 user,
                 generation_config=genai.types.GenerationConfig(max_output_tokens=max_tokens),
+                safety_settings=safety_settings,
                 stream=True
             )
             async for chunk in response:
