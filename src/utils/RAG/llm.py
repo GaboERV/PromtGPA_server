@@ -186,9 +186,12 @@ class GeminiClient(ILLMClient):
             model = genai.GenerativeModel('gemini-3.5-flash', system_instruction=system)
             response = await model.generate_content_async(
                 user,
-                generation_config=genai.types.GenerationConfig(max_output_tokens=max_tokens),
                 safety_settings=safety_settings
             )
+            
+            if response.candidates:
+                print(f"[Gemini Debug] Finish reason: {response.candidates[0].finish_reason}")
+                
             tokens = response.usage_metadata.candidates_token_count if hasattr(response, 'usage_metadata') else len(response.text.split())
             return response.text, tokens
         except Exception as e:
