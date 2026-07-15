@@ -10,7 +10,7 @@ from ....domain.notebook_context.entities.flashcard import Flashcard
 from ....utils.RAG.embeddings import embedding_service
 from ....utils.RAG.llm import LLMClientFactory
 MAX_CONTEXT_CHUNK_SIZE = 1200
-MAX_CONTEXT_CHUNKS = 5
+MAX_CONTEXT_CHUNKS = 8
 
 
 def _normalize_text(text: str) -> str:
@@ -279,8 +279,9 @@ class RealRAGEngineService(RAGEngineService):
         context = _build_relevant_context(prompt, texto_crudo)
         system = (
             "Eres un tutor inteligente y servicial llamado PromptGPT. "
-            "Responde a las preguntas del estudiante utilizando el contexto proporcionado del cuaderno de estudio. "
-            "Si la respuesta no se encuentra en el contexto, puedes usar tu conocimiento general pero prioriza siempre el contexto."
+            "Responde a las preguntas del estudiante utilizando ESTRICTAMENTE el contexto proporcionado del cuaderno de estudio. "
+            "Ten en cuenta que los estudiantes pueden usar sinónimos o términos imprecisos (ej. 'equipo' en lugar de 'grupo'); deduce a qué concepto del contexto se refieren. "
+            "Si el concepto definitivamente no está en el contexto, NO inventes la respuesta; dile amablemente al estudiante que ese tema específico no se encuentra en sus apuntes y ofrécele explicarle lo que sí está disponible."
         )
         
         historial_str = ""
