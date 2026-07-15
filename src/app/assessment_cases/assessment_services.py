@@ -29,10 +29,16 @@ class AssessmentService:
         self.cuaderno_repository = cuaderno_repository
         self.rag_engine = rag_engine
 
-    async def _obtener_texto_completo_cuaderno(self, notebook_id: int, archivo_ids: Optional[List[int]] = None) -> str:
+    async def _validar_propietario_cuaderno(self, notebook_id: int, user_id: int):
         cuaderno = await self.cuaderno_repository.get_by_id(notebook_id)
         if not cuaderno:
             raise CuadernoNoEncontradoError()
+        from ...domain.exceptions import PermisoDenegadoError
+        if cuaderno.user_id != user_id:
+            raise PermisoDenegadoError()
+
+    async def _obtener_texto_completo_cuaderno(self, notebook_id: int, user_id: int, archivo_ids: Optional[List[int]] = None) -> str:
+        await self._validar_propietario_cuaderno(notebook_id, user_id)
         archivos = await self.cuaderno_repository.list_archivos_by_notebook_id(notebook_id)
         if archivo_ids:
             archivos = [f for f in archivos if f.id in archivo_ids]
@@ -43,9 +49,9 @@ class AssessmentService:
 
     # --- Flashcards ---
     async def generar_flashcards(
-        self, notebook_id: int, prompt: str, cantidad: int = 5, archivo_ids: Optional[List[int]] = None
+        self, notebook_id: int, user_id: int, prompt: str, cantidad: int = 5, archivo_ids: Optional[List[int]] = None
     ) -> List[Flashcard]:
-        texto_crudo = await self._obtener_texto_completo_cuaderno(notebook_id, archivo_ids)
+        texto_crudo = await self._obtener_texto_completo_cuaderno(notebook_id, user_id, archivo_ids)
         flashcards = await self.rag_engine.generar_flashcards_por_contexto(
             prompt=prompt,
             archivo_ids=archivo_ids,
@@ -60,17 +66,15 @@ class AssessmentService:
 
         return flashcards
 
-    async def listar_flashcards(self, notebook_id: int) -> List[Flashcard]:
-        cuaderno = await self.cuaderno_repository.get_by_id(notebook_id)
-        if not cuaderno:
-            raise CuadernoNoEncontradoError()
+    async def listar_flashcards(self, notebook_id: int, user_id: int) -> List[Flashcard]:
+        await self._validar_propietario_cuaderno(notebook_id, user_id)
         return await self.cuaderno_repository.list_flashcards_by_notebook_id(notebook_id)
 
     # --- Exámenes ---
     async def generar_examen(
-        self, notebook_id: int, prompt: str, sala_id: Optional[int] = None, archivo_ids: Optional[List[int]] = None
+        self, notebook_id: int, user_id: int, prompt: str, sala_id: Optional[int] = None, archivo_ids: Optional[List[int]] = None
     ) -> Examen:
-        texto_crudo = await self._obtener_texto_completo_cuaderno(notebook_id, archivo_ids)
+        texto_crudo = await self._obtener_texto_completo_cuaderno(notebook_id, user_id, archivo_ids)
         examen = await self.rag_engine.generar_examen_por_contexto(
             prompt=prompt,
             archivo_ids=archivo_ids,
@@ -84,16 +88,16 @@ class AssessmentService:
         await self.examen_repository.save_examen(examen)
         return examen
 
-    async def obtener_examen(self, examen_id: int) -> Examen:
+    async def obtener_examen(self, examen_id: int, user_id: int) -> Examen:
         examen = await self.examen_repository.get_examen_by_id(examen_id)
         if not examen:
             raise ExamenNoEncontradoError()
+        # Validación de propiedad
+        await self._validar_propietario_cuaderno(examen.notebook_id, user_id)
         return examen
 
-    async def listar_examenes_por_cuaderno(self, notebook_id: int) -> List[Examen]:
-        cuaderno = await self.cuaderno_repository.get_by_id(notebook_id)
-        if not cuaderno:
-            raise CuadernoNoEncontradoError()
+    async def listar_examenes_por_cuaderno(self, notebook_id: int, user_id: int) -> List[Examen]:
+        await self._validar_propietario_cuaderno(notebook_id, user_id)
         return await self.examen_repository.list_examenes_by_notebook_id(notebook_id)
 
     async def listar_examenes_por_sala(self, sala_id: int) -> List[Examen]:

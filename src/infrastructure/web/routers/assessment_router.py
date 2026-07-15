@@ -137,6 +137,7 @@ async def generar_flashcards(
 ):
     return await assessment_service.generar_flashcards(
         notebook_id=schema.notebook_id,
+        user_id=current_user_id,
         prompt=schema.prompt,
         cantidad=schema.cantidad,
         archivo_ids=schema.archivo_ids
@@ -148,7 +149,7 @@ async def listar_flashcards(
     current_user_id: int = Depends(get_current_user_id),
     assessment_service: AssessmentService = Depends(get_assessment_service)
 ):
-    return await assessment_service.listar_flashcards(notebook_id)
+    return await assessment_service.listar_flashcards(notebook_id, current_user_id)
 
 
 # --- Endpoints Exámenes ---
@@ -161,6 +162,7 @@ async def generar_examen(
 ):
     examen = await assessment_service.generar_examen(
         notebook_id=schema.notebook_id,
+        user_id=current_user_id,
         prompt=schema.prompt,
         sala_id=schema.sala_id,
         archivo_ids=schema.archivo_ids
@@ -173,7 +175,7 @@ async def obtener_examen(
     current_user_id: int = Depends(get_current_user_id),
     assessment_service: AssessmentService = Depends(get_assessment_service)
 ):
-    examen = await assessment_service.obtener_examen(examen_id)
+    examen = await assessment_service.obtener_examen(examen_id, current_user_id)
     return map_examen_to_response(examen)
 
 @router.get("/exam/notebook/{notebook_id}", response_model=List[ExamenResponseSchema], status_code=status.HTTP_200_OK)
@@ -182,7 +184,7 @@ async def listar_examenes_por_cuaderno(
     current_user_id: int = Depends(get_current_user_id),
     assessment_service: AssessmentService = Depends(get_assessment_service)
 ):
-    examenes = await assessment_service.listar_examenes_por_cuaderno(notebook_id)
+    examenes = await assessment_service.listar_examenes_por_cuaderno(notebook_id, current_user_id)
     return [map_examen_to_response(e) for e in examenes]
 
 @router.get("/exam/sala/{sala_id}", response_model=List[ExamenResponseSchema], status_code=status.HTTP_200_OK)
