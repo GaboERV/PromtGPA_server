@@ -205,7 +205,7 @@ def _build_examen_from_response(response: str, prompt: str) -> Examen:
     )
 
 
-def _build_relevant_context(prompt: str, texto_crudo: Optional[str]) -> str:
+def _build_relevant_context(prompt: str, texto_crudo: Optional[str], search_query: Optional[str] = None) -> str:
     texto = texto_crudo or ""
     if not texto.strip():
         return ""
@@ -215,7 +215,8 @@ def _build_relevant_context(prompt: str, texto_crudo: Optional[str]) -> str:
         return texto.strip()
 
     chunk_embeddings = embedding_service.encode(chunks)
-    query_embedding = embedding_service.encode_one(prompt)
+    query_to_embed = search_query if search_query else prompt
+    query_embedding = embedding_service.encode_one(query_to_embed)
     scored = sorted(
         zip(chunks, chunk_embeddings),
         key=lambda item: _cosine_similarity(query_embedding, item[1]),
@@ -230,6 +231,20 @@ class RealRAGEngineService(RAGEngineService):
 
     def __init__(self):
         self.llm_client = LLMClientFactory.create()
+
+    async def _consultar_bibliotecario(self, prompt: str, historial_str: str) -> str:
+        system = (
+            "Eres un experto bibliotecario y buscador académico. Tu ÚNICO trabajo es extraer los conceptos clave "
+            "de la pregunta del estudiante y expandirlos con sinónimos académicos relevantes para optimizar una búsqueda en una base de datos vectorial. "
+            "Aplica esto para cualquier materia o tema. No respondas la pregunta del estudiante. "
+            "SOLO devuelve una lista de palabras clave, separadas por comas. "
+            "Ejemplos: "
+            "1. Si preguntan '4 tipos de equipos', devuelve 'tipos de equipo, grupos de trabajo, equipos colaborativos, dinámica de grupos'. "
+            "2. Si preguntan 'cómo hacer un loop en python', devuelve 'bucle, loop, for, while, iteración, programación en python'."
+        )
+        user = f"{historial_str}Pregunta del estudiante: {prompt}\n\nGenera solo las palabras clave de búsqueda:"
+        output, _ = await self.llm_client.complete(system, user, max_tokens=150)
+        return output
 
     async def generar_flashcards_por_contexto(
         self,
@@ -276,14 +291,6 @@ class RealRAGEngineService(RAGEngineService):
         historial: List[dict],
         texto_crudo: str
     ) -> str:
-        context = _build_relevant_context(prompt, texto_crudo)
-        system = (
-            "Eres un tutor inteligente y servicial llamado PromptGPT. "
-            "Responde a las preguntas del estudiante utilizando ESTRICTAMENTE el contexto proporcionado del cuaderno de estudio. "
-            "Ten en cuenta que los estudiantes pueden usar sinónimos o términos imprecisos (ej. 'equipo' en lugar de 'grupo'); deduce a qué concepto del contexto se refieren. "
-            "Si el concepto definitivamente no está en el contexto, NO inventes la respuesta; dile amablemente al estudiante que ese tema específico no se encuentra en sus apuntes y ofrécele explicarle lo que sí está disponible."
-        )
-        
         historial_str = ""
         if historial:
             historial_str = "Historial de la conversación:\n"
@@ -291,12 +298,27 @@ class RealRAGEngineService(RAGEngineService):
                 historial_str += f"- {msg['role'].capitalize()}: {msg['content']}\n"
             historial_str += "\n"
 
+        # 1. Agente Bibliotecario (Extrae palabras clave)
+        search_query = await self._consultar_bibliotecario(prompt, historial_str)
+        print(f"[RAG Agent] Bibliotecario sugirió: {search_query}")
+
+        # 2. Búsqueda Vectorial con la query optimizada
+        context = _build_relevant_context(prompt, texto_crudo, search_query=search_query)
+
+        # 3. Agente Tutor (Responde en base al contexto)
+        system = (
+            "Eres un tutor inteligente y servicial llamado PromptGPT. "
+            "Responde a las preguntas del estudiante utilizando ESTRICTAMENTE el contexto proporcionado del cuaderno de estudio. "
+            "Ten en cuenta que los estudiantes pueden usar sinónimos o términos imprecisos (ej. 'equipo' en lugar de 'grupo'); deduce a qué concepto del contexto se refieren. "
+            "Si el concepto definitivamente no está en el contexto, NO inventes la respuesta; dile amablemente al estudiante que ese tema específico no se encuentra en sus apuntes y ofrécele explicarle lo que sí está disponible."
+        )
+        
         user = (
             f"Contexto del cuaderno:\n{context}\n\n"
             f"{historial_str}"
             f"Mensaje actual del estudiante: {prompt}"
         )
-        output, _ = await self.llm_client.complete(system, user, max_tokens=650)
+        output, _ = await self.llm_client.complete(system, user)
         return output
 
     async def generar_resumen_por_contexto(self, texto_crudo: str) -> str:
