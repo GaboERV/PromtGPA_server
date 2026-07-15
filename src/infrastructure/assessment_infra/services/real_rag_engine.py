@@ -235,9 +235,12 @@ class RealRAGEngineService(RAGEngineService):
     async def _consultar_bibliotecario(self, prompt: str, historial_str: str) -> str:
         system = (
             "Eres un experto bibliotecario y buscador académico. Tu ÚNICO trabajo es extraer los conceptos clave "
-            "de la pregunta del estudiante y expandirlos con sinónimos académicos para optimizar una búsqueda en una base de datos vectorial. "
-            "No respondas la pregunta. SOLO devuelve una lista de palabras clave, separadas por comas. "
-            "Ejemplo: Si el usuario dice '4 tipos de equipos', tú devuelves 'tipos de equipo, grupos de trabajo, equipos colaborativos, grupos autodirigidos, clima laboral'."
+            "de la pregunta del estudiante y expandirlos con sinónimos académicos relevantes para optimizar una búsqueda en una base de datos vectorial. "
+            "Aplica esto para cualquier materia o tema. No respondas la pregunta del estudiante. "
+            "SOLO devuelve una lista de palabras clave, separadas por comas. "
+            "Ejemplos: "
+            "1. Si preguntan '4 tipos de equipos', devuelve 'tipos de equipo, grupos de trabajo, equipos colaborativos, dinámica de grupos'. "
+            "2. Si preguntan 'cómo hacer un loop en python', devuelve 'bucle, loop, for, while, iteración, programación en python'."
         )
         user = f"{historial_str}Pregunta del estudiante: {prompt}\n\nGenera solo las palabras clave de búsqueda:"
         output, _ = await self.llm_client.complete(system, user, max_tokens=150)
