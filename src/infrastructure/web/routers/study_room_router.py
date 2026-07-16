@@ -17,10 +17,17 @@ from .notebook_router import FileResponseSchema, ChatResponseSchema, MessageResp
 from .assessment_router import (
     FlashcardResponseSchema,
     ExamenResponseSchema,
-    FlashcardGenerateSchema,
-    ExamGenerateSchema,
     map_examen_to_response
 )
+
+class SalaFlashcardGenerateSchema(BaseModel):
+    prompt: str
+    cantidad: Optional[int] = 5
+    archivo_ids: Optional[List[int]] = None
+
+class SalaExamGenerateSchema(BaseModel):
+    prompt: str
+    archivo_ids: Optional[List[int]] = None
 
 router = APIRouter(prefix="/study-rooms", tags=["Salas de Estudio"])
 
@@ -304,7 +311,7 @@ async def enviar_mensaje_chat_sala(
 @router.post("/{sala_id}/flashcards", response_model=List[FlashcardResponseSchema], status_code=status.HTTP_201_CREATED)
 async def generar_flashcards_sala(
     sala_id: int,
-    schema: FlashcardGenerateSchema,
+    schema: SalaFlashcardGenerateSchema,
     current_user_id: int = Depends(get_current_user_id),
     study_room_service: StudyRoomService = Depends(get_study_room_service),
     assessment_service: AssessmentService = Depends(get_assessment_service)
@@ -332,7 +339,7 @@ async def listar_flashcards_sala(
 @router.post("/{sala_id}/exam", response_model=ExamenResponseSchema, status_code=status.HTTP_201_CREATED)
 async def generar_examen_sala(
     sala_id: int,
-    schema: ExamGenerateSchema,
+    schema: SalaExamGenerateSchema,
     current_user_id: int = Depends(get_current_user_id),
     study_room_service: StudyRoomService = Depends(get_study_room_service),
     assessment_service: AssessmentService = Depends(get_assessment_service)
