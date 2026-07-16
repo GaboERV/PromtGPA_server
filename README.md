@@ -112,6 +112,8 @@ IS_TESTING=true python test_flow.py
 
 ## Variables de Entorno
 
+> ⚠️ **IMPORTANTE**: Para que la generación de contenido con IA (Chat, Resúmenes, Flashcards, Exámenes) funcione correctamente, es **estrictamente obligatorio** configurar la API Key del proveedor de LLM que elijas (`LLM_PROVIDER`), ya que sin ella el sistema devolverá respuestas simuladas (Mock).
+
 | Variable | Default | Descripción |
 |---|---|---|
 | `DATABASE_URL` | `sqlite+aiosqlite:///./prompt_gpt.db` | URI async de BD. Para Postgres: `postgresql+asyncpg://user:pass@host:port/db` |
