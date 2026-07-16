@@ -183,7 +183,7 @@ class GeminiClient(ILLMClient):
                 HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
                 HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
             }
-            model = genai.GenerativeModel('gemini-3.5-flash', system_instruction=system)
+            model = genai.GenerativeModel('gemini-1.5-flash', system_instruction=system)
             response = await model.generate_content_async(
                 user,
                 safety_settings=safety_settings
@@ -213,7 +213,7 @@ class GeminiClient(ILLMClient):
                 HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
                 HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
             }
-            model = genai.GenerativeModel('gemini-3.5-flash', system_instruction=system)
+            model = genai.GenerativeModel('gemini-1.5-flash', system_instruction=system)
             response = await model.generate_content_async(
                 user,
                 generation_config=genai.types.GenerationConfig(max_output_tokens=max_tokens),
@@ -229,11 +229,62 @@ class GeminiClient(ILLMClient):
                 yield chunk
 
 
+class GroqClient(ILLMClient):
+    def __init__(self, api_key: str):
+        try:
+            from openai import AsyncOpenAI
+            self.client = AsyncOpenAI(api_key=api_key, base_url="https://api.groq.com/openai/v1")
+        except ImportError:
+            self.client = None
+
+    async def complete(self, system: str, user: str, max_tokens: int = 1024) -> tuple[str, int]:
+        if not self.client:
+            return await MockLLMClient().complete(system, user, max_tokens)
+        try:
+            response = await self.client.chat.completions.create(
+                model="llama-3.1-8b-instant",
+                messages=[
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": user}
+                ],
+                max_tokens=max_tokens,
+            )
+            text = response.choices[0].message.content if response.choices else ""
+            tokens = response.usage.completion_tokens if response.usage else 0
+            return text, tokens
+        except Exception as e:
+            print(f"[Groq Error]: {e}")
+            return await MockLLMClient().complete(system, user, max_tokens)
+
+    async def stream(self, system: str, user: str, max_tokens: int = 1024) -> AsyncGenerator[str, None]:
+        if not self.client:
+            async for chunk in MockLLMClient().stream(system, user, max_tokens):
+                yield chunk
+            return
+        try:
+            stream = await self.client.chat.completions.create(
+                model="llama-3.1-8b-instant",
+                messages=[
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": user}
+                ],
+                max_tokens=max_tokens,
+                stream=True,
+            )
+            async for chunk in stream:
+                if chunk.choices and chunk.choices[0].delta.content:
+                    yield chunk.choices[0].delta.content
+        except Exception as e:
+            print(f"[Groq Stream Error]: {e}")
+            async for chunk in MockLLMClient().stream(system, user, max_tokens):
+                yield chunk
+
+
 class LLMClientFactory:
     """Patrón Factory para seleccionar el cliente LLM según configuración."""
 
     @staticmethod
-    def create(provider: Optional[Literal["claude", "openai", "gemini"]] = None) -> ILLMClient:
+    def create(provider: Optional[Literal["claude", "openai", "gemini", "groq"]] = None) -> ILLMClient:
         provider = provider or os.getenv("LLM_PROVIDER")
 
         if provider == "claude":
@@ -248,5 +299,9 @@ class LLMClientFactory:
             if not os.getenv("GOOGLE_API_KEY"):
                 return MockLLMClient()
             return GeminiClient(os.getenv("GOOGLE_API_KEY"))
+        elif provider == "groq":
+            if not os.getenv("GROQ_API_KEY"):
+                return MockLLMClient()
+            return GroqClient(os.getenv("GROQ_API_KEY"))
         else:
             return MockLLMClient()
