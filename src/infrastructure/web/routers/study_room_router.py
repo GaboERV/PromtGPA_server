@@ -313,6 +313,7 @@ async def generar_flashcards_sala(
     # Permite a invitados y administradores generar flashcards para estudiar
     return await assessment_service.generar_flashcards(
         notebook_id=acceso.sala.notebook_id,
+        user_id=current_user_id,
         prompt=schema.prompt,
         cantidad=schema.cantidad,
         archivo_ids=schema.archivo_ids
@@ -326,7 +327,7 @@ async def listar_flashcards_sala(
     assessment_service: AssessmentService = Depends(get_assessment_service)
 ):
     acceso = await study_room_service.obtener_acceso_sala(sala_id, current_user_id)
-    return await assessment_service.listar_flashcards(acceso.sala.notebook_id)
+    return await assessment_service.listar_flashcards(acceso.sala.notebook_id, current_user_id)
 
 @router.post("/{sala_id}/exam", response_model=ExamenResponseSchema, status_code=status.HTTP_201_CREATED)
 async def generar_examen_sala(
@@ -342,6 +343,7 @@ async def generar_examen_sala(
     
     examen = await assessment_service.generar_examen(
         notebook_id=acceso.sala.notebook_id,
+        user_id=current_user_id,
         prompt=schema.prompt,
         sala_id=sala_id,
         archivo_ids=schema.archivo_ids
