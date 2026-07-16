@@ -263,7 +263,7 @@ class RealRAGEngineService(RAGEngineService):
             "Devuelve solo un array JSON de objetos con las claves 'question' y 'answer'.\n"
             f"Contexto:\n{context}\n\nPrompt: {prompt}"
         )
-        output, _ = await self.llm_client.complete(system, user, max_tokens=650)
+        output, _ = await self.llm_client.complete(system, user, max_tokens=4000)
         return _build_flashcards_from_response(output, cantidad)
 
     async def generar_examen_por_contexto(
@@ -282,7 +282,7 @@ class RealRAGEngineService(RAGEngineService):
             "Devuelve solo un objeto JSON con 'title' y 'questions'. Cada pregunta debe tener 'question_text', 'opciones' y 'correct_answer'.\n"
             f"Contexto:\n{context}\n\nPrompt: {prompt}"
         )
-        output, _ = await self.llm_client.complete(system, user, max_tokens=900)
+        output, _ = await self.llm_client.complete(system, user, max_tokens=4000)
         return _build_examen_from_response(output, prompt)
 
     async def generar_respuesta_chat(
