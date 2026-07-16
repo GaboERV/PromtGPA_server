@@ -253,7 +253,8 @@ class RealRAGEngineService(RAGEngineService):
         texto_crudo: Optional[str] = None,
         cantidad: int = 5
     ) -> List[Flashcard]:
-        context = _build_relevant_context(prompt, texto_crudo)
+        search_query = await self._consultar_bibliotecario(prompt, "")
+        context = _build_relevant_context(prompt, texto_crudo, search_query=search_query)
         system = (
             "Eres un asistente pedagógico experto que genera material de estudio diverso y profundo a partir del contexto proporcionado. "
             "DEBES generar preguntas diferentes entre sí, explorando distintos conceptos del texto. NUNCA repitas la misma pregunta. "
@@ -274,7 +275,8 @@ class RealRAGEngineService(RAGEngineService):
         archivo_ids: Optional[List[int]] = None,
         texto_crudo: Optional[str] = None
     ) -> Examen:
-        context = _build_relevant_context(prompt, texto_crudo)
+        search_query = await self._consultar_bibliotecario(prompt, "")
+        context = _build_relevant_context(prompt, texto_crudo, search_query=search_query)
         system = (
             "Eres un asistente pedagógico que genera exámenes de práctica. "
             "Responde únicamente con JSON válido cuando sea posible."
