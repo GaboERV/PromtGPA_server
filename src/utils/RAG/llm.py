@@ -242,7 +242,7 @@ class GroqClient(ILLMClient):
             return await MockLLMClient().complete(system, user, max_tokens)
         try:
             response = await self.client.chat.completions.create(
-                model="llama-3.1-8b-instant",
+                model="llama3-70b-8192",
                 messages=[
                     {"role": "system", "content": system},
                     {"role": "user", "content": user}
@@ -263,7 +263,7 @@ class GroqClient(ILLMClient):
             return
         try:
             stream = await self.client.chat.completions.create(
-                model="llama-3.1-8b-instant",
+                model="llama3-70b-8192",
                 messages=[
                     {"role": "system", "content": system},
                     {"role": "user", "content": user}
