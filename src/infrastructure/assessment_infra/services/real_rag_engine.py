@@ -106,9 +106,10 @@ def _build_flashcards_from_response(response: str, cantidad: int) -> List[Flashc
                 notebook_id=None,
                 created_at=datetime.utcnow()
             ))
-        if len(cards) == cantidad:
+        if cards:
             return cards
 
+    print(f"[Flashcard Parser Fallback] No se pudo extraer JSON o el JSON no contiene flashcards válidas. Output original: {response}")
     return [
         Flashcard(
             id=None,
@@ -152,7 +153,7 @@ def _build_examen_from_response(response: str, prompt: str) -> Examen:
                     opciones=opciones,
                     correct_answer=correct_answer
                 ))
-            if len(preguntas) == 3 and all(p.correct_answer for p in preguntas):
+            if preguntas and all(p.correct_answer for p in preguntas):
                 return Examen(
                     id=None,
                     title=title,
@@ -160,6 +161,7 @@ def _build_examen_from_response(response: str, prompt: str) -> Examen:
                     preguntas=preguntas
                 )
 
+    print(f"[Examen Parser Fallback] No se pudo extraer JSON o las preguntas no son válidas. Output original: {response}")
     return Examen(
         id=None,
         title=f"Examen de práctica: {prompt[:30] if prompt else 'Generación RAG'}",
