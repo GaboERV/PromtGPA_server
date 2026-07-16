@@ -255,13 +255,15 @@ class RealRAGEngineService(RAGEngineService):
     ) -> List[Flashcard]:
         context = _build_relevant_context(prompt, texto_crudo)
         system = (
-            "Eres un asistente pedagógico que genera material de estudio a partir del contexto proporcionado. "
-            "Responde únicamente con JSON válido siempre que sea posible."
+            "Eres un asistente pedagógico experto que genera material de estudio diverso y profundo a partir del contexto proporcionado. "
+            "DEBES generar preguntas diferentes entre sí, explorando distintos conceptos del texto. NUNCA repitas la misma pregunta. "
+            "Responde únicamente con un array JSON válido."
         )
         user = (
-            f"Genera {cantidad} tarjetas de estudio con pregunta y respuesta. "
-            "Devuelve solo un array JSON de objetos con las claves 'question' y 'answer'.\n"
-            f"Contexto:\n{context}\n\nPrompt: {prompt}"
+            f"Genera exactamente {cantidad} tarjetas de estudio (flashcards) diferentes con pregunta y respuesta basadas en el contexto. "
+            "Asegúrate de que cada tarjeta cubra un tema, definición o concepto distinto. NO repitas información. "
+            "Devuelve estrictamente un array JSON de objetos con las claves 'question' y 'answer'.\n\n"
+            f"Contexto:\n{context}\n\nTema solicitado (Prompt): {prompt}"
         )
         output, _ = await self.llm_client.complete(system, user, max_tokens=4000)
         return _build_flashcards_from_response(output, cantidad)
