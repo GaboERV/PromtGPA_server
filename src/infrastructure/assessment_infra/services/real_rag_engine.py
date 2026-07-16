@@ -255,19 +255,32 @@ class RealRAGEngineService(RAGEngineService):
     ) -> List[Flashcard]:
         search_query = await self._consultar_bibliotecario(prompt, "")
         context = _build_relevant_context(prompt, texto_crudo, search_query=search_query)
-        system = (
-            "Eres un asistente pedagógico experto que genera material de estudio diverso y profundo a partir del contexto proporcionado. "
-            "DEBES generar preguntas diferentes entre sí, explorando distintos conceptos del texto. NUNCA repitas la misma pregunta. "
-            "Responde únicamente con un array JSON válido."
+        # Agente 1: Creador de Contenido
+        system_creador = (
+            "Eres un experto pedagógico. Tu tarea es generar material de estudio profundo y diverso basado en el contexto. "
+            "DEBES generar preguntas diferentes entre sí, explorando distintos conceptos del texto. NUNCA repitas la misma pregunta ni alucines. "
+            "No te preocupes por el formato, solo redacta las preguntas y respuestas claramente."
         )
-        user = (
-            f"Genera exactamente {cantidad} tarjetas de estudio (flashcards) diferentes con pregunta y respuesta basadas en el contexto. "
-            "Asegúrate de que cada tarjeta cubra un tema, definición o concepto distinto. NO repitas información. "
-            "Devuelve estrictamente un array JSON de objetos con las claves 'question' y 'answer'.\n\n"
+        user_creador = (
+            f"Redacta exactamente {cantidad} tarjetas de estudio (flashcards) diferentes con pregunta y respuesta basadas en el contexto. "
+            "Asegúrate de que cada tarjeta cubra un tema o concepto distinto. NO repitas información.\n\n"
             f"Contexto:\n{context}\n\nTema solicitado (Prompt): {prompt}"
         )
-        output, _ = await self.llm_client.complete(system, user, max_tokens=4000)
-        return _build_flashcards_from_response(output, cantidad)
+        texto_bruto, _ = await self.llm_client.complete(system_creador, user_creador, max_tokens=4000)
+
+        # Agente 2: Formateador JSON
+        system_formateador = (
+            "Eres un ingeniero de datos especializado en JSON. Tu ÚNICA salida debe ser JSON válido. "
+            "No incluyas texto conversacional, ni introducciones, ni formateo Markdown como ```json."
+        )
+        user_formateador = (
+            "Convierte el siguiente texto en un objeto JSON con la clave 'flashcards' que contenga un array de objetos. "
+            "Cada objeto del array debe tener exactamente dos claves: 'question' y 'answer'.\n\n"
+            f"Texto a formatear:\n{texto_bruto}"
+        )
+        output_json, _ = await self.llm_client.complete(system_formateador, user_formateador, max_tokens=2000)
+        
+        return _build_flashcards_from_response(output_json, cantidad)
 
     async def generar_examen_por_contexto(
         self,
@@ -277,17 +290,33 @@ class RealRAGEngineService(RAGEngineService):
     ) -> Examen:
         search_query = await self._consultar_bibliotecario(prompt, "")
         context = _build_relevant_context(prompt, texto_crudo, search_query=search_query)
-        system = (
-            "Eres un asistente pedagógico que genera exámenes de práctica. "
-            "Responde únicamente con JSON válido cuando sea posible."
+        # Agente 1: Creador de Contenido
+        system_creador = (
+            "Eres un profesor experto diseñando evaluaciones. "
+            "Tu tarea es crear preguntas de opción múltiple desafiantes y precisas basadas exclusivamente en el contexto. "
+            "No te preocupes por el formato final, redacta las preguntas de forma clara."
         )
-        user = (
-            "Genera un examen de práctica con tres preguntas de opción múltiple. "
-            "Devuelve solo un objeto JSON con 'title' y 'questions'. Cada pregunta debe tener 'question_text', 'opciones' y 'correct_answer'.\n"
-            f"Contexto:\n{context}\n\nPrompt: {prompt}"
+        user_creador = (
+            "Redacta un examen de práctica con tres (3) preguntas de opción múltiple basadas en el contexto. "
+            "Cada pregunta debe tener un texto claro, 4 opciones (A, B, C, D) donde solo una es correcta, e indicar cuál es la correcta.\n\n"
+            f"Contexto:\n{context}\n\nTema solicitado (Prompt): {prompt}"
         )
-        output, _ = await self.llm_client.complete(system, user, max_tokens=4000)
-        return _build_examen_from_response(output, prompt)
+        texto_bruto, _ = await self.llm_client.complete(system_creador, user_creador, max_tokens=4000)
+
+        # Agente 2: Formateador JSON
+        system_formateador = (
+            "Eres un ingeniero de datos especializado en JSON. Tu ÚNICA salida debe ser JSON válido. "
+            "No incluyas texto conversacional ni formateo Markdown."
+        )
+        user_formateador = (
+            "Convierte el siguiente examen en un objeto JSON estricto. "
+            "El JSON debe tener la clave 'title' (título del examen) y la clave 'questions' (un array). "
+            "Cada objeto dentro de 'questions' debe tener: 'question_text', 'opciones' (un objeto con claves A, B, C, D) y 'correct_answer' (la letra correcta).\n\n"
+            f"Texto a formatear:\n{texto_bruto}"
+        )
+        output_json, _ = await self.llm_client.complete(system_formateador, user_formateador, max_tokens=2000)
+        
+        return _build_examen_from_response(output_json, prompt)
 
     async def generar_respuesta_chat(
         self,
